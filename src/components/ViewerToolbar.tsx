@@ -1,3 +1,4 @@
+
 import React from 'react';
 import LiquidGlass from 'liquid-glass-react';
 import { Button } from '@/components/ui/button';
@@ -36,100 +37,101 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
   onExportScreenshot
 }) => {
   return (
-    <LiquidGlass
-      displacementScale={15}
-      aberrationIntensity={0.3}
-      className="w-full"
-    >
-      <div className="glass-toolbar border-b border-white/20 dark:border-black/20 p-6 relative z-10 backdrop-blur-xl bg-white/40 dark:bg-black/30">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
-              pixel8d
-            </h1>
-            <div className="h-6 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent dark:via-slate-600" />
-            <span className="text-sm text-slate-600 dark:text-slate-400 font-light">
-              professional gaussian splat viewer
-            </span>
-            {isLoading && (
-              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 ml-6">
-                <div className="w-4 h-4 border border-current border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm font-light">loading...</span>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={isLoading}
-                  className="glass-button gap-2"
-                >
-                  <Camera size={16} />
-                  presets
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass-dropdown">
-                {presets.map((preset) => (
-                  <DropdownMenuItem 
-                    key={preset.name}
-                    onClick={() => onPresetSelect(preset)}
-                    className="cursor-pointer glass-menu-item"
+    <div className="fixed top-0 left-0 right-0 z-50">
+      <LiquidGlass
+        displacementScale={8}
+        aberrationIntensity={0.1}
+      >
+        <div className="glass-toolbar border-b border-white/20 dark:border-black/20 p-6 relative backdrop-blur-xl bg-white/40 dark:bg-black/30">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
+                pixel8d
+              </h1>
+              <div className="h-6 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent dark:via-slate-600" />
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-light">
+                professional gaussian splat viewer
+              </span>
+              {isLoading && (
+                <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 ml-6">
+                  <div className="w-4 h-4 border border-current border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm font-light">loading...</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isLoading}
+                    className="glass-button gap-2"
                   >
-                    {preset.name.toLowerCase()} view
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onReset}
-              disabled={isLoading}
-              className="glass-button gap-2"
-            >
-              <RotateCcw size={16} />
-              reset
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSettingsToggle}
-              disabled={isLoading}
-              className={`glass-button gap-2 ${showSettings ? 'glass-button-active' : ''}`}
-            >
-              <Settings size={16} />
-              settings
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onExportScreenshot}
-              disabled={isLoading}
-              className="glass-button gap-2"
-            >
-              <Download size={16} />
-              export
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isLoading}
-              className="glass-button gap-2"
-            >
-              <Share size={16} />
-              share
-            </Button>
+                    <Camera size={16} />
+                    presets
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="glass-dropdown">
+                  {presets.map((preset) => (
+                    <DropdownMenuItem 
+                      key={preset.name}
+                      onClick={() => onPresetSelect(preset)}
+                      className="cursor-pointer glass-menu-item"
+                    >
+                      {preset.name.toLowerCase()} view
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onReset}
+                disabled={isLoading}
+                className="glass-button gap-2"
+              >
+                <RotateCcw size={16} />
+                reset
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSettingsToggle}
+                disabled={isLoading}
+                className={`glass-button gap-2 ${showSettings ? 'glass-button-active' : ''}`}
+              >
+                <Settings size={16} />
+                settings
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onExportScreenshot}
+                disabled={isLoading}
+                className="glass-button gap-2"
+              >
+                <Download size={16} />
+                export
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isLoading}
+                className="glass-button gap-2"
+              >
+                <Share size={16} />
+                share
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    </LiquidGlass>
+      </LiquidGlass>
+    </div>
   );
 };

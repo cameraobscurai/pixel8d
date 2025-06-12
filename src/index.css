@@ -98,82 +98,119 @@
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    padding-top: 96px; /* Account for fixed toolbar */
   }
 }
 
-/* Enhanced glass morphism utilities with liquid glass support */
+/* Enhanced glass morphism utilities optimized for liquid glass */
 @layer components {
   .glass-panel {
-    @apply backdrop-blur-xl bg-white/20 dark:bg-black/15 
-           border border-white/10 dark:border-black/10 
+    @apply backdrop-blur-xl border border-white/20 dark:border-black/20 
            shadow-2xl shadow-black/5 dark:shadow-black/25;
-    /* Enhanced for liquid glass displacement */
     background: linear-gradient(135deg, 
-      rgba(255, 255, 255, 0.25) 0%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0.1) 100%);
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0.15) 100%);
+    /* Enhanced for liquid glass visibility */
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
   }
 
   .dark .glass-panel {
     background: linear-gradient(135deg, 
-      rgba(0, 0, 0, 0.3) 0%,
-      rgba(0, 0, 0, 0.2) 50%,
-      rgba(0, 0, 0, 0.15) 100%);
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.3) 50%,
+      rgba(0, 0, 0, 0.2) 100%);
   }
 
   .glass-toolbar {
-    @apply backdrop-blur-xl bg-white/30 dark:bg-black/25 
-           border-white/20 dark:border-black/20;
-    /* Enhanced for liquid glass displacement */
+    @apply border-white/20 dark:border-black/20;
     background: linear-gradient(180deg, 
-      rgba(255, 255, 255, 0.4) 0%,
-      rgba(255, 255, 255, 0.25) 100%);
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.3) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
 
   .dark .glass-toolbar {
     background: linear-gradient(180deg, 
-      rgba(0, 0, 0, 0.4) 0%,
-      rgba(0, 0, 0, 0.25) 100%);
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0.3) 100%);
   }
 
   .glass-button {
-    @apply backdrop-blur-sm bg-white/40 dark:bg-black/20 
-           border border-white/20 dark:border-black/20 
+    @apply backdrop-blur-sm border border-white/30 dark:border-black/30 
            text-slate-700 dark:text-slate-300 font-light
-           hover:bg-white/60 dark:hover:bg-black/30 
-           hover:border-white/30 dark:hover:border-black/30
+           hover:border-white/50 dark:hover:border-black/50
            transition-all duration-300 ease-out
            shadow-sm hover:shadow-md;
-    /* Enhanced for better liquid glass visibility */
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.4) 100%);
+    backdrop-filter: blur(8px) saturate(150%);
+    -webkit-backdrop-filter: blur(8px) saturate(150%);
+  }
+
+  .dark .glass-button {
+    background: linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.3) 100%);
+  }
+
+  .glass-button:hover {
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.8) 0%,
+      rgba(255, 255, 255, 0.6) 100%);
+  }
+
+  .dark .glass-button:hover {
+    background: linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.6) 0%,
+      rgba(0, 0, 0, 0.4) 100%);
+  }
+
+  .glass-button-active {
+    @apply border-white/60 dark:border-black/60 shadow-md;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.7) 100%);
+  }
+
+  .dark .glass-button-active {
+    background: linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.7) 0%,
+      rgba(0, 0, 0, 0.5) 100%);
+  }
+
+  .glass-select {
+    @apply backdrop-blur-sm border border-white/30 dark:border-black/30 
+           text-slate-700 dark:text-slate-300 font-light
+           focus:border-white/50 dark:focus:border-black/50;
     background: linear-gradient(135deg, 
       rgba(255, 255, 255, 0.5) 0%,
       rgba(255, 255, 255, 0.3) 100%);
   }
 
-  .dark .glass-button {
+  .dark .glass-select {
     background: linear-gradient(135deg, 
       rgba(0, 0, 0, 0.3) 0%,
       rgba(0, 0, 0, 0.2) 100%);
   }
 
-  .glass-button-active {
-    @apply bg-white/70 dark:bg-black/40 
-           border-white/40 dark:border-black/40
-           shadow-md;
-  }
-
-  .glass-select {
-    @apply backdrop-blur-sm bg-white/40 dark:bg-black/20 
-           border border-white/20 dark:border-black/20 
-           text-slate-700 dark:text-slate-300 font-light
-           focus:bg-white/60 dark:focus:bg-black/30
-           focus:border-white/40 dark:focus:border-black/40;
-  }
-
   .glass-dropdown {
-    @apply backdrop-blur-xl bg-white/80 dark:bg-black/60 
-           border border-white/20 dark:border-black/20 
+    @apply backdrop-blur-xl border border-white/30 dark:border-black/30 
            shadow-2xl shadow-black/10 dark:shadow-black/40;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.8) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .dark .glass-dropdown {
+    background: linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.8) 0%,
+      rgba(0, 0, 0, 0.7) 100%);
   }
 
   .glass-menu-item {
@@ -183,29 +220,44 @@
   }
 
   .glass-switch {
-    @apply backdrop-blur-sm border border-white/20 dark:border-black/20;
+    @apply backdrop-blur-sm border border-white/30 dark:border-black/30;
   }
 
   .glass-input {
-    @apply backdrop-blur-sm bg-white/30 dark:bg-black/20
-           border border-white/20 dark:border-black/20
-           focus:bg-white/50 dark:focus:bg-black/30;
+    @apply backdrop-blur-sm border border-white/30 dark:border-black/30
+           focus:border-white/50 dark:focus:border-black/50;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.2) 100%);
+  }
+
+  .dark .glass-input {
+    background: linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.2) 100%);
   }
 
   .glass-input-display {
-    @apply backdrop-blur-sm bg-white/20 dark:bg-black/15
-           border border-white/15 dark:border-black/15
-           rounded-lg;
+    @apply backdrop-blur-sm border border-white/20 dark:border-black/20 rounded-lg;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(255, 255, 255, 0.2) 100%);
+  }
+
+  .dark .glass-input-display {
+    background: linear-gradient(135deg, 
+      rgba(0, 0, 0, 0.25) 0%,
+      rgba(0, 0, 0, 0.15) 100%);
   }
 
   .glass-slider {
     @apply [&_[role=slider]]:backdrop-blur-sm 
-           [&_[role=slider]]:bg-white/60 dark:[&_[role=slider]]:bg-black/40
-           [&_[role=slider]]:border-white/30 dark:[&_[role=slider]]:border-black/30;
+           [&_[role=slider]]:bg-white/70 dark:[&_[role=slider]]:bg-black/50
+           [&_[role=slider]]:border-white/40 dark:[&_[role=slider]]:border-black/40;
   }
 
   .glass-divider {
-    @apply h-px bg-gradient-to-r from-transparent via-slate-300/30 dark:via-slate-600/30 to-transparent;
+    @apply h-px bg-gradient-to-r from-transparent via-slate-300/40 dark:via-slate-600/40 to-transparent;
   }
 
   /* Fluid typography */
