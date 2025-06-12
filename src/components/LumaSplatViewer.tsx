@@ -1,11 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
+import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
-import { AdvancedRenderer, QUALITY_PROFILES } from './rendering/AdvancedRenderer';
-import { PerformanceMonitor } from './rendering/PerformanceMonitor';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CameraState {
   position: { x: number; y: number; z: number };
@@ -41,24 +38,20 @@ const BOUNDS = {
 
 export const LumaSplatViewer: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const advancedRendererRef = useRef<AdvancedRenderer | null>(null);
+  const rendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const splatsRef = useRef<any>(null);
   const animationIdRef = useRef<number>();
-  const performanceMonitorRef = useRef<PerformanceMonitor>(new PerformanceMonitor());
   const isManualUpdateRef = useRef(false);
   const hasInitializedRef = useRef(false);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
-  const [aspectRatio, setAspectRatio] = useState(16/9);
+  const [aspectRatio, setAspectRatio] = useState(16/9); // Default aspect ratio
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [smoothness, setSmoothness] = useState(0.1);
-  const [performanceStats, setPerformanceStats] = useState<any>(null);
-  
-  const isMobile = useIsMobile();
 
   const constrainValue = useCallback((value: number, min: number, max: number) => {
     return MathUtils.clamp(value, min, max);
@@ -209,21 +202,27 @@ export const LumaSplatViewer: React.FC = () => {
       if (!canvasRef.current) return;
 
       try {
-        console.log('PIXEL8D: Initializing advanced viewer with quality profile:', isMobile ? 'mobile' : 'desktop');
+        console.log('PIXEL8D: Initializing viewer...');
         
         // Get initial container dimensions and aspect ratio
         const { width, height, aspectRatio: initialAspectRatio } = getContainerDimensions();
         setAspectRatio(initialAspectRatio);
         
-        // Initialize advanced renderer
-        const advancedRenderer = new AdvancedRenderer(canvasRef.current, isMobile);
-        advancedRenderer.setSize(width, height);
-        advancedRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // Dynamically import the Luma library
+        const { LumaSplatsThree } = await import('@lumaai/luma-web');
+
+        // Initialize Three.js scene with performance optimizations
+        const renderer = new WebGLRenderer({
+          canvas: canvasRef.current,
+          antialias: false, // Luma performance recommendation
+          alpha: true,
+          powerPreference: "high-performance"
+        });
         
         const updateSize = () => {
           const { width, height, aspectRatio: newAspectRatio } = getContainerDimensions();
           
-          advancedRenderer.setSize(width, height);
+          renderer.setSize(width, height);
           setAspectRatio(newAspectRatio);
           
           if (cameraRef.current) {
@@ -231,6 +230,9 @@ export const LumaSplatViewer: React.FC = () => {
             cameraRef.current.updateProjectionMatrix();
           }
         };
+        
+        updateSize();
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
         const scene = new Scene();
         
@@ -254,7 +256,7 @@ export const LumaSplatViewer: React.FC = () => {
         camera.updateProjectionMatrix();
 
         // Initialize OrbitControls with proper bounds
-        const controls = new OrbitControls(camera, canvasRef.current);
+        const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = smoothness;
         controls.screenSpacePanning = false;
@@ -262,7 +264,7 @@ export const LumaSplatViewer: React.FC = () => {
         // Set bounded controls to prevent camera chaos
         controls.minDistance = 0.5;
         controls.maxDistance = 15;
-        controls.maxPolarAngle = Math.PI;
+        controls.maxPolarAngle = Math.PI; // Allow full rotation
         controls.minPolarAngle = 0;
         controls.enablePan = true;
         controls.panSpeed = 0.8;
@@ -277,12 +279,10 @@ export const LumaSplatViewer: React.FC = () => {
         controls.addEventListener('change', updateCameraFromControls);
 
         // Load Luma Splats with proper error handling
-        const { LumaSplatsThree } = await import('@lumaai/luma-web');
-        
         const splats = new LumaSplatsThree({
           source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
           particleRevealEnabled: true,
-          enableThreeShaderIntegration: false,
+          enableThreeShaderIntegration: false, // Performance optimization
           loadingAnimationEnabled: true
         });
 
@@ -291,13 +291,9 @@ export const LumaSplatViewer: React.FC = () => {
           console.log('PIXEL8D: Luma splats loaded successfully');
           setIsLoading(false);
           
-          // Log quality profile being used
-          const profile = advancedRenderer.getQualityProfile();
-          console.log('PIXEL8D: Using quality profile:', profile);
-          
           // Capture cubemap for realistic lighting
           try {
-            splats.captureCubemap(advancedRenderer.getRenderer()).then((texture: any) => {
+            splats.captureCubemap(renderer).then((texture: any) => {
               if (texture) {
                 scene.environment = texture;
                 console.log('PIXEL8D: Environment cubemap captured');
@@ -313,42 +309,24 @@ export const LumaSplatViewer: React.FC = () => {
         scene.add(splats);
 
         // Store references
-        advancedRendererRef.current = advancedRenderer;
+        rendererRef.current = renderer;
         sceneRef.current = scene;
         cameraRef.current = camera;
         controlsRef.current = controls;
         splatsRef.current = splats;
 
-        // Set up performance monitoring
-        const performanceMonitor = performanceMonitorRef.current;
-        performanceMonitor.onMetricsUpdate((metrics) => {
-          setPerformanceStats({
-            ...metrics,
-            renderer: advancedRenderer.getPerformanceStats()
-          });
-        });
-
         // Mark as initialized after everything is set up
         setTimeout(() => {
           hasInitializedRef.current = true;
-          console.log('PIXEL8D: Advanced camera initialization complete');
+          console.log('PIXEL8D: Camera initialization complete');
         }, 200);
 
-        // Animation loop with performance monitoring
+        // Animation loop
         const animate = () => {
-          performanceMonitor.startFrame();
-          
-          if (advancedRendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
+          if (rendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
             controlsRef.current.update();
-            
-            // Update depth pyramid for occlusion culling
-            advancedRendererRef.current.updateDepthPyramid();
-            
-            // Render with advanced pipeline
-            advancedRendererRef.current.render(sceneRef.current, cameraRef.current);
+            rendererRef.current.render(sceneRef.current, cameraRef.current);
           }
-          
-          performanceMonitor.endFrame();
           animationIdRef.current = requestAnimationFrame(animate);
         };
         animate();
@@ -362,8 +340,8 @@ export const LumaSplatViewer: React.FC = () => {
           controls.removeEventListener('change', updateCameraFromControls);
         };
       } catch (err) {
-        console.error('PIXEL8D: Failed to initialize advanced viewer:', err);
-        setError('Failed to initialize advanced 3D viewer. Please check your connection and try again.');
+        console.error('PIXEL8D: Failed to initialize viewer:', err);
+        setError('Failed to initialize 3D viewer. Please check your connection and try again.');
         setIsLoading(false);
       }
     };
@@ -377,11 +355,11 @@ export const LumaSplatViewer: React.FC = () => {
       if (controlsRef.current) {
         controlsRef.current.dispose();
       }
-      if (advancedRendererRef.current) {
-        advancedRendererRef.current.dispose();
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
       }
     };
-  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength, isMobile]);
+  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength]);
 
   // Force initial camera state update after component mounts
   useEffect(() => {
@@ -440,8 +418,6 @@ export const LumaSplatViewer: React.FC = () => {
         isLoading={isLoading}
         presets={CAMERA_PRESETS}
         onPresetSelect={handlePresetSelect}
-        performanceStats={performanceStats}
-        qualityProfile={advancedRendererRef.current?.getQualityProfile()}
       />
       
       <div className="flex-1 flex">
@@ -455,10 +431,8 @@ export const LumaSplatViewer: React.FC = () => {
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <div className="text-center">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading PIXEL8D Advanced...</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Initializing {isMobile ? 'Mobile Optimized' : 'Desktop High Quality'} pipeline
-                </p>
+                <p className="text-muted-foreground">Loading PIXEL8D...</p>
+                <p className="text-xs text-muted-foreground mt-2">Initializing Gaussian Splat viewer</p>
               </div>
             </div>
           )}

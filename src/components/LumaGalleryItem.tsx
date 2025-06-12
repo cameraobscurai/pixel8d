@@ -79,7 +79,7 @@ export const LumaGalleryItem: React.FC<LumaGalleryItemProps> = ({
 
   const cardStyle = layoutMode === 'masonry' ? {
     height: `${getItemHeight()}px`,
-    breakInside: 'avoid' as const,
+    breakInside: 'avoid',
     marginBottom: '24px'
   } : {
     height: '400px'
