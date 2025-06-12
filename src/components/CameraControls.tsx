@@ -1,5 +1,6 @@
 
 import React from 'react';
+import LiquidGlass from 'liquid-glass-react';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -55,90 +56,98 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   };
 
   return (
-    <Card className="w-80 p-6 glass-panel border-r border-white/20 dark:border-black/20">
-      <div className="space-y-6">
-        {/* Focal Length Control */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm font-light text-slate-600 dark:text-slate-400">focal length</Label>
-            <span className="text-xs text-slate-500 dark:text-slate-500">mm</span>
-          </div>
-          <div className="glass-input-display p-3 mb-3">
-            <div className="text-2xl font-mono text-slate-700 dark:text-slate-300">
-              {cameraState.focalLength.toFixed(2)}
+    <LiquidGlass
+      displacementScale={15}
+      aberrationIntensity={0.2}
+      turbulenceStrength={0.015}
+      animationSpeed={0.3}
+      style={{ width: '320px' }}
+    >
+      <Card className="w-80 p-6 glass-panel border-r border-white/20 dark:border-black/20 backdrop-blur-xl bg-white/30 dark:bg-black/20">
+        <div className="space-y-6">
+          {/* Focal Length Control */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-light text-slate-600 dark:text-slate-400">focal length</Label>
+              <span className="text-xs text-slate-500 dark:text-slate-500">mm</span>
             </div>
-          </div>
-          <Slider
-            value={[cameraState.focalLength]}
-            onValueChange={handleFocalLengthChange}
-            min={bounds.focalLength.min}
-            max={bounds.focalLength.max}
-            step={0.1}
-            className="w-full glass-slider"
-          />
-        </div>
-
-        {/* Smoothness Control */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm font-light text-slate-600 dark:text-slate-400">smoothness</Label>
-            <span className="text-xs text-slate-500 dark:text-slate-500">{(smoothness * 100).toFixed(0)}%</span>
-          </div>
-          <Slider
-            value={[smoothness]}
-            onValueChange={handleSmoothnessChange}
-            min={0.01}
-            max={0.5}
-            step={0.01}
-            className="w-full glass-slider"
-          />
-        </div>
-
-        <div className="glass-divider" />
-
-        {/* Position Controls */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-light text-slate-600 dark:text-slate-400 uppercase tracking-wide">position</h3>
-          {['x', 'y', 'z'].map((axis) => (
-            <div key={axis} className="flex items-center justify-between">
-              <Label className="text-sm font-light text-slate-600 dark:text-slate-400 w-4">{axis}</Label>
-              <Input
-                type="number"
-                value={cameraState.position[axis as keyof typeof cameraState.position].toFixed(2)}
-                onChange={(e) => handleInputChange('position', axis, e.target.value)}
-                className="w-24 text-right font-mono glass-input"
-                step="0.01"
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="glass-divider" />
-
-        {/* Rotation Controls */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-light text-slate-600 dark:text-slate-400 uppercase tracking-wide">rotation</h3>
-          {[
-            { key: 'roll', label: 'roll' },
-            { key: 'pitch', label: 'pitch' },
-            { key: 'yaw', label: 'yaw' }
-          ].map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between">
-              <Label className="text-sm font-light text-slate-600 dark:text-slate-400">{label}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  value={cameraState.rotation[key as keyof typeof cameraState.rotation].toFixed(2)}
-                  onChange={(e) => handleInputChange('rotation', key, e.target.value)}
-                  className="w-24 text-right font-mono glass-input"
-                  step="0.1"
-                />
-                <span className="text-xs text-slate-500 dark:text-slate-500 w-4">°</span>
+            <div className="glass-input-display p-3 mb-3">
+              <div className="text-2xl font-mono text-slate-700 dark:text-slate-300">
+                {cameraState.focalLength.toFixed(2)}
               </div>
             </div>
-          ))}
+            <Slider
+              value={[cameraState.focalLength]}
+              onValueChange={handleFocalLengthChange}
+              min={bounds.focalLength.min}
+              max={bounds.focalLength.max}
+              step={0.1}
+              className="w-full glass-slider"
+            />
+          </div>
+
+          {/* Smoothness Control */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-light text-slate-600 dark:text-slate-400">smoothness</Label>
+              <span className="text-xs text-slate-500 dark:text-slate-500">{(smoothness * 100).toFixed(0)}%</span>
+            </div>
+            <Slider
+              value={[smoothness]}
+              onValueChange={handleSmoothnessChange}
+              min={0.01}
+              max={0.5}
+              step={0.01}
+              className="w-full glass-slider"
+            />
+          </div>
+
+          <div className="glass-divider" />
+
+          {/* Position Controls */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-light text-slate-600 dark:text-slate-400 uppercase tracking-wide">position</h3>
+            {['x', 'y', 'z'].map((axis) => (
+              <div key={axis} className="flex items-center justify-between">
+                <Label className="text-sm font-light text-slate-600 dark:text-slate-400 w-4">{axis}</Label>
+                <Input
+                  type="number"
+                  value={cameraState.position[axis as keyof typeof cameraState.position].toFixed(2)}
+                  onChange={(e) => handleInputChange('position', axis, e.target.value)}
+                  className="w-24 text-right font-mono glass-input"
+                  step="0.01"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="glass-divider" />
+
+          {/* Rotation Controls */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-light text-slate-600 dark:text-slate-400 uppercase tracking-wide">rotation</h3>
+            {[
+              { key: 'roll', label: 'roll' },
+              { key: 'pitch', label: 'pitch' },
+              { key: 'yaw', label: 'yaw' }
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between">
+                <Label className="text-sm font-light text-slate-600 dark:text-slate-400">{label}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={cameraState.rotation[key as keyof typeof cameraState.rotation].toFixed(2)}
+                    onChange={(e) => handleInputChange('rotation', key, e.target.value)}
+                    className="w-24 text-right font-mono glass-input"
+                    step="0.1"
+                  />
+                  <span className="text-xs text-slate-500 dark:text-slate-500 w-4">°</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </LiquidGlass>
   );
 };

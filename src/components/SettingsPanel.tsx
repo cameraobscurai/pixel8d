@@ -1,5 +1,6 @@
 
 import React from 'react';
+import LiquidGlass from 'liquid-glass-react';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -31,99 +32,107 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onSemanticMaskChange
 }) => {
   return (
-    <div className="w-80 glass-panel border-l border-white/20 dark:border-black/20">
-      <div className="p-6 space-y-8">
-        <div>
-          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
-            camera settings
-          </h3>
-          
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-light text-slate-600 dark:text-slate-400">grid overlay</Label>
-              <Switch
-                checked={showGrid}
-                onCheckedChange={onGridToggle}
-                className="glass-switch"
-              />
+    <LiquidGlass
+      displacementScale={18}
+      aberrationIntensity={0.25}
+      turbulenceStrength={0.018}
+      animationSpeed={0.4}
+      style={{ width: '320px' }}
+    >
+      <div className="w-80 glass-panel border-l border-white/20 dark:border-black/20 backdrop-blur-xl bg-white/30 dark:bg-black/20">
+        <div className="p-6 space-y-8">
+          <div>
+            <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+              camera settings
+            </h3>
+            
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-light text-slate-600 dark:text-slate-400">grid overlay</Label>
+                <Switch
+                  checked={showGrid}
+                  onCheckedChange={onGridToggle}
+                  className="glass-switch"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="glass-divider" />
+          <div className="glass-divider" />
 
-        <div>
-          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
-            rendering
-          </h3>
-          
-          <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+              rendering
+            </h3>
+            
+            <div className="space-y-6">
+              <div>
+                <Label className="text-sm font-light text-slate-600 dark:text-slate-400 mb-3 block">quality preset</Label>
+                <Select value={qualityPreset} onValueChange={onQualityChange}>
+                  <SelectTrigger className="glass-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-dropdown">
+                    <SelectItem value="ultra" className="glass-menu-item">ultra</SelectItem>
+                    <SelectItem value="high" className="glass-menu-item">high</SelectItem>
+                    <SelectItem value="medium" className="glass-menu-item">medium</SelectItem>
+                    <SelectItem value="low" className="glass-menu-item">low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-light text-slate-600 dark:text-slate-400">depth buffer</Label>
+                <Switch
+                  checked={depthBufferEnabled}
+                  onCheckedChange={onDepthBufferToggle}
+                  className="glass-switch"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-divider" />
+
+          <div>
+            <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+              semantic layers
+            </h3>
+            
             <div>
-              <Label className="text-sm font-light text-slate-600 dark:text-slate-400 mb-3 block">quality preset</Label>
-              <Select value={qualityPreset} onValueChange={onQualityChange}>
+              <Label className="text-sm font-light text-slate-600 dark:text-slate-400 mb-3 block">layer mask</Label>
+              <Select value={semanticMask} onValueChange={onSemanticMaskChange}>
                 <SelectTrigger className="glass-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="glass-dropdown">
-                  <SelectItem value="ultra" className="glass-menu-item">ultra</SelectItem>
-                  <SelectItem value="high" className="glass-menu-item">high</SelectItem>
-                  <SelectItem value="medium" className="glass-menu-item">medium</SelectItem>
-                  <SelectItem value="low" className="glass-menu-item">low</SelectItem>
+                  <SelectItem value="all" className="glass-menu-item">all layers</SelectItem>
+                  <SelectItem value="foreground" className="glass-menu-item">foreground only</SelectItem>
+                  <SelectItem value="background" className="glass-menu-item">background only</SelectItem>
+                  <SelectItem value="objects" className="glass-menu-item">objects only</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-light text-slate-600 dark:text-slate-400">depth buffer</Label>
-              <Switch
-                checked={depthBufferEnabled}
-                onCheckedChange={onDepthBufferToggle}
-                className="glass-switch"
-              />
-            </div>
           </div>
-        </div>
 
-        <div className="glass-divider" />
+          <div className="glass-divider" />
 
-        <div>
-          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
-            semantic layers
-          </h3>
-          
           <div>
-            <Label className="text-sm font-light text-slate-600 dark:text-slate-400 mb-3 block">layer mask</Label>
-            <Select value={semanticMask} onValueChange={onSemanticMaskChange}>
-              <SelectTrigger className="glass-select">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="glass-dropdown">
-                <SelectItem value="all" className="glass-menu-item">all layers</SelectItem>
-                <SelectItem value="foreground" className="glass-menu-item">foreground only</SelectItem>
-                <SelectItem value="background" className="glass-menu-item">background only</SelectItem>
-                <SelectItem value="objects" className="glass-menu-item">objects only</SelectItem>
-              </SelectContent>
-            </Select>
+            <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+              export
+            </h3>
+            
+            <Button
+              variant="outline"
+              onClick={onExportScreenshot}
+              className="w-full glass-button gap-2"
+            >
+              <Download size={16} />
+              high-resolution export
+            </Button>
           </div>
-        </div>
-
-        <div className="glass-divider" />
-
-        <div>
-          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
-            export
-          </h3>
-          
-          <Button
-            variant="outline"
-            onClick={onExportScreenshot}
-            className="w-full glass-button gap-2"
-          >
-            <Download size={16} />
-            high-resolution export
-          </Button>
         </div>
       </div>
-    </div>
+    </LiquidGlass>
   );
 };
