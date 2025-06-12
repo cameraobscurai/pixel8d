@@ -1,9 +1,15 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils } from 'three';
-import { LumaSplatsThree } from '@lumaai/luma-web';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
+
+// Declare LumaSplatsThree type since it might not have TypeScript definitions
+declare global {
+  interface Window {
+    LumaSplatsThree: any;
+  }
+}
 
 interface CameraState {
   position: { x: number; y: number; z: number };
@@ -28,13 +34,14 @@ export const LumaSplatViewer: React.FC = () => {
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
-  const splatsRef = useRef<LumaSplatsThree | null>(null);
+  const splatsRef = useRef<any>(null);
   const animationIdRef = useRef<number>();
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [lastMousePosition, setLastMousePosition] = useState({ x: 0, y: 0 });
+  const [error, setError] = useState<string | null>(null);
 
   const constrainValue = useCallback((value: number, min: number, max: number) => {
     return MathUtils.clamp(value, min, max);
@@ -63,55 +70,98 @@ export const LumaSplatViewer: React.FC = () => {
   }, [cameraState]);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    const initViewer = async () => {
+      if (!canvasRef.current) return;
 
-    // Initialize Three.js scene
-    const renderer = new WebGLRenderer({
-      canvas: canvasRef.current,
-      antialias: false,
-      alpha: true
-    });
-    renderer.setSize(800, 600);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      try {
+        // Dynamically import the Luma library
+        const { LumaSplatsThree } = await import('@lumaai/luma-web');
 
-    const scene = new Scene();
-    
-    const camera = new PerspectiveCamera(75, 800 / 600, 0.1, 1000);
+        // Initialize Three.js scene
+        const renderer = new WebGLRenderer({
+          canvas: canvasRef.current,
+          antialias: false,
+          alpha: true
+        });
+        
+        const updateSize = () => {
+          const container = canvasRef.current?.parentElement;
+          if (container) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            renderer.setSize(width, height);
+            if (cameraRef.current) {
+              cameraRef.current.aspect = width / height;
+              cameraRef.current.updateProjectionMatrix();
+            }
+          }
+        };
+        
+        updateSize();
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Load Luma Splats
-    const splats = new LumaSplatsThree({
-      source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
-      particleRevealEnabled: true,
-      enableThreeShaderIntegration: true
-    });
+        const scene = new Scene();
+        
+        const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
 
-    splats.onLoad = () => {
-      console.log('Luma splats loaded successfully');
-      setIsLoading(false);
-    };
+        // Load Luma Splats
+        const splats = new LumaSplatsThree({
+          source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
+          particleRevealEnabled: true,
+          enableThreeShaderIntegration: true
+        });
 
-    scene.add(splats);
+        splats.onLoad = () => {
+          console.log('PIXEL8D: Luma splats loaded successfully');
+          setIsLoading(false);
+        };
 
-    // Store references
-    rendererRef.current = renderer;
-    sceneRef.current = scene;
-    cameraRef.current = camera;
-    splatsRef.current = splats;
+        splats.onError = (error: any) => {
+          console.error('PIXEL8D: Error loading splats:', error);
+          setError('Failed to load 3D scene');
+          setIsLoading(false);
+        };
 
-    // Animation loop
-    const animate = () => {
-      if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
+        scene.add(splats);
+
+        // Store references
+        rendererRef.current = renderer;
+        sceneRef.current = scene;
+        cameraRef.current = camera;
+        splatsRef.current = splats;
+
+        // Animation loop
+        const animate = () => {
+          if (rendererRef.current && sceneRef.current && cameraRef.current) {
+            rendererRef.current.render(sceneRef.current, cameraRef.current);
+          }
+          animationIdRef.current = requestAnimationFrame(animate);
+        };
+        animate();
+
+        // Handle resize
+        const handleResize = () => updateSize();
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+          window.removeEventListener('resize', handleResize);
+        };
+      } catch (err) {
+        console.error('PIXEL8D: Failed to initialize viewer:', err);
+        setError('Failed to initialize 3D viewer');
+        setIsLoading(false);
       }
-      animationIdRef.current = requestAnimationFrame(animate);
     };
-    animate();
+
+    initViewer();
 
     return () => {
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
       }
-      renderer.dispose();
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+      }
     };
   }, []);
 
@@ -205,7 +255,21 @@ export const LumaSplatViewer: React.FC = () => {
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <div className="text-center">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading Gaussian Splats...</p>
+                <p className="text-muted-foreground">Loading PIXEL8D...</p>
+              </div>
+            </div>
+          )}
+          
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+              <div className="text-center">
+                <p className="text-destructive mb-2">⚠️ {error}</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="text-primary underline"
+                >
+                  Retry
+                </button>
               </div>
             </div>
           )}
