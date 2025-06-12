@@ -1,16 +1,33 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Settings, Download, Share } from 'lucide-react';
+import { RotateCcw, Settings, Download, Share, Camera } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+interface CameraPreset {
+  name: string;
+  position: { x: number; y: number; z: number };
+  rotation: { roll: number; pitch: number; yaw: number };
+  focalLength: number;
+}
 
 interface ViewerToolbarProps {
   onReset: () => void;
   isLoading: boolean;
+  presets: CameraPreset[];
+  onPresetSelect: (preset: CameraPreset) => void;
 }
 
 export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
   onReset,
-  isLoading
+  isLoading,
+  presets,
+  onPresetSelect
 }) => {
   return (
     <div className="border-b border-border bg-background p-4">
@@ -19,7 +36,7 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
           <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             PIXEL8D
           </h1>
-          <span className="text-sm text-muted-foreground">Gaussian Splat Viewer</span>
+          <span className="text-sm text-muted-foreground">Professional Gaussian Splat Viewer</span>
           {isLoading && (
             <div className="flex items-center gap-2 text-muted-foreground ml-4">
               <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
@@ -29,6 +46,31 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+                className="gap-2"
+              >
+                <Camera size={16} />
+                Presets
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {presets.map((preset) => (
+                <DropdownMenuItem 
+                  key={preset.name}
+                  onClick={() => onPresetSelect(preset)}
+                  className="cursor-pointer"
+                >
+                  {preset.name} View
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Button
             variant="outline"
             size="sm"

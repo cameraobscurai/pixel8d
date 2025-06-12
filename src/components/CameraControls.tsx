@@ -21,12 +21,16 @@ interface CameraControlsProps {
   cameraState: CameraState;
   onCameraChange: (updates: Partial<CameraState>) => void;
   bounds: Bounds;
+  smoothness: number;
+  onSmoothnessChange: (value: number) => void;
 }
 
 export const CameraControls: React.FC<CameraControlsProps> = ({
   cameraState,
   onCameraChange,
-  bounds
+  bounds,
+  smoothness,
+  onSmoothnessChange
 }) => {
   const handleInputChange = (
     category: 'position' | 'rotation',
@@ -44,6 +48,10 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
 
   const handleFocalLengthChange = (value: number[]) => {
     onCameraChange({ focalLength: value[0] });
+  };
+
+  const handleSmoothnessChange = (value: number[]) => {
+    onSmoothnessChange(value[0]);
   };
 
   return (
@@ -70,9 +78,26 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           />
         </div>
 
+        {/* Smoothness Control */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-medium">smoothness</Label>
+            <span className="text-xs text-muted-foreground">{(smoothness * 100).toFixed(0)}%</span>
+          </div>
+          <Slider
+            value={[smoothness]}
+            onValueChange={handleSmoothnessChange}
+            min={0.01}
+            max={0.5}
+            step={0.01}
+            className="w-full"
+          />
+        </div>
+
         <div className="border-t border-border pt-6">
           {/* Position Controls */}
           <div className="space-y-4 mb-6">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Position</h3>
             {['x', 'y', 'z'].map((axis) => (
               <div key={axis} className="flex items-center justify-between">
                 <Label className="text-sm font-medium w-4">{axis}</Label>
@@ -90,6 +115,7 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           <div className="border-t border-border pt-6">
             {/* Rotation Controls */}
             <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Rotation</h3>
               {[
                 { key: 'roll', label: 'roll' },
                 { key: 'pitch', label: 'pitch' },

@@ -1,17 +1,18 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils } from 'three';
+import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
+import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
 
-// Declare LumaSplatsThree type since it might not have TypeScript definitions
-declare global {
-  interface Window {
-    LumaSplatsThree: any;
-  }
+interface CameraState {
+  position: { x: number; y: number; z: number };
+  rotation: { roll: number; pitch: number; yaw: number };
+  focalLength: number;
 }
 
-interface CameraState {
+interface CameraPreset {
+  name: string;
   position: { x: number; y: number; z: number };
   rotation: { roll: number; pitch: number; yaw: number };
   focalLength: number;
@@ -22,6 +23,13 @@ const INITIAL_CAMERA_STATE: CameraState = {
   rotation: { roll: 0, pitch: 0, yaw: 0 },
   focalLength: 30.56
 };
+
+const CAMERA_PRESETS: CameraPreset[] = [
+  { name: 'Front', position: { x: 0, y: 0, z: 3 }, rotation: { roll: 0, pitch: 0, yaw: 0 }, focalLength: 35 },
+  { name: 'Side', position: { x: 3, y: 0, z: 0 }, rotation: { roll: 0, pitch: 0, yaw: 90 }, focalLength: 35 },
+  { name: 'Top', position: { x: 0, y: 3, z: 0 }, rotation: { roll: 0, pitch: -90, yaw: 0 }, focalLength: 35 },
+  { name: 'Perspective', position: { x: 2, y: 1, z: 2 }, rotation: { roll: 0, pitch: -15, yaw: 45 }, focalLength: 28 }
+];
 
 const BOUNDS = {
   position: { min: -10, max: 10 },
@@ -34,23 +42,24 @@ export const LumaSplatViewer: React.FC = () => {
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const splatsRef = useRef<any>(null);
   const animationIdRef = useRef<number>();
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastMousePosition, setLastMousePosition] = useState({ x: 0, y: 0 });
   const [error, setError] = useState<string | null>(null);
+  const [smoothness, setSmoothness] = useState(0.1);
 
   const constrainValue = useCallback((value: number, min: number, max: number) => {
     return MathUtils.clamp(value, min, max);
   }, []);
 
   const updateCamera = useCallback(() => {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current || !controlsRef.current) return;
 
     const camera = cameraRef.current;
+    const controls = controlsRef.current;
     const { position, rotation, focalLength } = cameraState;
 
     // Update camera position
@@ -67,6 +76,48 @@ export const LumaSplatViewer: React.FC = () => {
     const fov = (2 * Math.atan(36 / (2 * focalLength))) * (180 / Math.PI);
     camera.fov = fov;
     camera.updateProjectionMatrix();
+
+    // Update OrbitControls target
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }, [cameraState]);
+
+  const animateToPreset = useCallback((preset: CameraPreset) => {
+    if (!cameraRef.current) return;
+
+    const startState = { ...cameraState };
+    const duration = 1000; // 1 second
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Smooth easing function
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+      const interpolatedState: CameraState = {
+        position: {
+          x: startState.position.x + (preset.position.x - startState.position.x) * easeProgress,
+          y: startState.position.y + (preset.position.y - startState.position.y) * easeProgress,
+          z: startState.position.z + (preset.position.z - startState.position.z) * easeProgress,
+        },
+        rotation: {
+          roll: startState.rotation.roll + (preset.rotation.roll - startState.rotation.roll) * easeProgress,
+          pitch: startState.rotation.pitch + (preset.rotation.pitch - startState.rotation.pitch) * easeProgress,
+          yaw: startState.rotation.yaw + (preset.rotation.yaw - startState.rotation.yaw) * easeProgress,
+        },
+        focalLength: startState.focalLength + (preset.focalLength - startState.focalLength) * easeProgress
+      };
+
+      setCameraState(interpolatedState);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
   }, [cameraState]);
 
   useEffect(() => {
@@ -74,14 +125,17 @@ export const LumaSplatViewer: React.FC = () => {
       if (!canvasRef.current) return;
 
       try {
+        console.log('PIXEL8D: Initializing viewer...');
+        
         // Dynamically import the Luma library
         const { LumaSplatsThree } = await import('@lumaai/luma-web');
 
-        // Initialize Three.js scene
+        // Initialize Three.js scene with performance optimizations
         const renderer = new WebGLRenderer({
           canvas: canvasRef.current,
-          antialias: false,
-          alpha: true
+          antialias: false, // Luma performance recommendation
+          alpha: true,
+          powerPreference: "high-performance"
         });
         
         const updateSize = () => {
@@ -102,24 +156,53 @@ export const LumaSplatViewer: React.FC = () => {
 
         const scene = new Scene();
         
+        // Add atmospheric fog for enhanced visuals
+        scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
+        
         const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
 
-        // Load Luma Splats
+        // Initialize OrbitControls with proper bounds
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = smoothness;
+        controls.screenSpacePanning = false;
+        
+        // Set bounded controls to prevent camera chaos
+        controls.minDistance = 0.5;
+        controls.maxDistance = 15;
+        controls.maxPolarAngle = Math.PI; // Allow full rotation
+        controls.minPolarAngle = 0;
+        controls.enablePan = true;
+        controls.panSpeed = 0.8;
+        controls.rotateSpeed = 0.5;
+        controls.zoomSpeed = 0.8;
+
+        // Load Luma Splats with proper error handling
         const splats = new LumaSplatsThree({
           source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
           particleRevealEnabled: true,
-          enableThreeShaderIntegration: true
+          enableThreeShaderIntegration: false, // Performance optimization
+          loadingAnimationEnabled: true
         });
 
+        // Handle successful load
         splats.onLoad = () => {
           console.log('PIXEL8D: Luma splats loaded successfully');
           setIsLoading(false);
-        };
-
-        splats.onError = (error: any) => {
-          console.error('PIXEL8D: Error loading splats:', error);
-          setError('Failed to load 3D scene');
-          setIsLoading(false);
+          
+          // Capture cubemap for realistic lighting
+          try {
+            splats.captureCubemap(renderer).then((texture: any) => {
+              if (texture) {
+                scene.environment = texture;
+                console.log('PIXEL8D: Environment cubemap captured');
+              }
+            }).catch((err: any) => {
+              console.warn('PIXEL8D: Failed to capture cubemap:', err);
+            });
+          } catch (err) {
+            console.warn('PIXEL8D: Cubemap capture not supported:', err);
+          }
         };
 
         scene.add(splats);
@@ -128,11 +211,13 @@ export const LumaSplatViewer: React.FC = () => {
         rendererRef.current = renderer;
         sceneRef.current = scene;
         cameraRef.current = camera;
+        controlsRef.current = controls;
         splatsRef.current = splats;
 
         // Animation loop
         const animate = () => {
-          if (rendererRef.current && sceneRef.current && cameraRef.current) {
+          if (rendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
+            controlsRef.current.update();
             rendererRef.current.render(sceneRef.current, cameraRef.current);
           }
           animationIdRef.current = requestAnimationFrame(animate);
@@ -148,7 +233,7 @@ export const LumaSplatViewer: React.FC = () => {
         };
       } catch (err) {
         console.error('PIXEL8D: Failed to initialize viewer:', err);
-        setError('Failed to initialize 3D viewer');
+        setError('Failed to initialize 3D viewer. Please check your connection and try again.');
         setIsLoading(false);
       }
     };
@@ -159,6 +244,9 @@ export const LumaSplatViewer: React.FC = () => {
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
       }
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
       if (rendererRef.current) {
         rendererRef.current.dispose();
       }
@@ -168,6 +256,12 @@ export const LumaSplatViewer: React.FC = () => {
   useEffect(() => {
     updateCamera();
   }, [updateCamera]);
+
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.dampingFactor = smoothness;
+    }
+  }, [smoothness]);
 
   const handleCameraChange = useCallback((updates: Partial<CameraState>) => {
     setCameraState(prev => {
@@ -194,61 +288,31 @@ export const LumaSplatViewer: React.FC = () => {
     });
   }, [constrainValue]);
 
-  const handleMouseDown = useCallback((event: React.MouseEvent) => {
-    setIsDragging(true);
-    setLastMousePosition({ x: event.clientX, y: event.clientY });
-  }, []);
-
-  const handleMouseMove = useCallback((event: React.MouseEvent) => {
-    if (!isDragging) return;
-
-    const deltaX = event.clientX - lastMousePosition.x;
-    const deltaY = event.clientY - lastMousePosition.y;
-
-    handleCameraChange({
-      rotation: {
-        ...cameraState.rotation,
-        yaw: cameraState.rotation.yaw + deltaX * 0.5,
-        pitch: cameraState.rotation.pitch - deltaY * 0.5
-      }
-    });
-
-    setLastMousePosition({ x: event.clientX, y: event.clientY });
-  }, [isDragging, lastMousePosition, cameraState.rotation, handleCameraChange]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  const handleWheel = useCallback((event: React.WheelEvent) => {
-    event.preventDefault();
-    const delta = event.deltaY * 0.01;
-    handleCameraChange({
-      position: {
-        ...cameraState.position,
-        z: cameraState.position.z + delta
-      }
-    });
-  }, [cameraState.position, handleCameraChange]);
-
   const resetCamera = useCallback(() => {
-    setCameraState(INITIAL_CAMERA_STATE);
-  }, []);
+    animateToPreset({
+      name: 'Reset',
+      ...INITIAL_CAMERA_STATE
+    });
+  }, [animateToPreset]);
+
+  const handlePresetSelect = useCallback((preset: CameraPreset) => {
+    animateToPreset(preset);
+  }, [animateToPreset]);
 
   return (
     <div className="w-full h-screen bg-background flex flex-col">
-      <ViewerToolbar onReset={resetCamera} isLoading={isLoading} />
+      <ViewerToolbar 
+        onReset={resetCamera} 
+        isLoading={isLoading}
+        presets={CAMERA_PRESETS}
+        onPresetSelect={handlePresetSelect}
+      />
       
       <div className="flex-1 flex">
         <div className="flex-1 relative">
           <canvas
             ref={canvasRef}
-            className="w-full h-full cursor-grab active:cursor-grabbing"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
+            className="w-full h-full"
           />
           
           {isLoading && (
@@ -256,17 +320,18 @@ export const LumaSplatViewer: React.FC = () => {
               <div className="text-center">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Loading PIXEL8D...</p>
+                <p className="text-xs text-muted-foreground mt-2">Initializing Gaussian Splat viewer</p>
               </div>
             </div>
           )}
           
           {error && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-              <div className="text-center">
-                <p className="text-destructive mb-2">⚠️ {error}</p>
+              <div className="text-center max-w-md p-6">
+                <p className="text-destructive mb-4">⚠️ {error}</p>
                 <button 
                   onClick={() => window.location.reload()} 
-                  className="text-primary underline"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90 transition-colors"
                 >
                   Retry
                 </button>
@@ -279,6 +344,8 @@ export const LumaSplatViewer: React.FC = () => {
           cameraState={cameraState}
           onCameraChange={handleCameraChange}
           bounds={BOUNDS}
+          smoothness={smoothness}
+          onSmoothnessChange={setSmoothness}
         />
       </div>
     </div>
