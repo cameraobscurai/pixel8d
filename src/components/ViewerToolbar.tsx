@@ -2,6 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { RotateCcw, Settings, Download, Share, Camera } from 'lucide-react';
+import { Vr } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,13 +22,19 @@ interface ViewerToolbarProps {
   isLoading: boolean;
   presets: CameraPreset[];
   onPresetSelect: (preset: CameraPreset) => void;
+  onEnterVR?: () => void;
+  isVRSupported?: boolean;
+  isVRActive?: boolean;
 }
 
 export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
   onReset,
   isLoading,
   presets,
-  onPresetSelect
+  onPresetSelect,
+  onEnterVR,
+  isVRSupported = false,
+  isVRActive = false
 }) => {
   return (
     <div className="border-b border-border bg-background p-4">
@@ -46,6 +53,19 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+          {isVRSupported && (
+            <Button
+              variant={isVRActive ? "default" : "outline"}
+              size="sm"
+              onClick={onEnterVR}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              <Vr size={16} />
+              {isVRActive ? 'Exit VR' : 'Enter VR'}
+            </Button>
+          )}
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

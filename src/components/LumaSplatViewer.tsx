@@ -3,6 +3,7 @@ import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, C
 import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
+import { WebXRManager } from '../utils/webXRUtils';
 
 interface CameraState {
   position: { x: number; y: number; z: number };
@@ -46,12 +47,15 @@ export const LumaSplatViewer: React.FC = () => {
   const animationIdRef = useRef<number>();
   const isManualUpdateRef = useRef(false);
   const hasInitializedRef = useRef(false);
+  const webXRManagerRef = useRef<WebXRManager | null>(null);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
   const [aspectRatio, setAspectRatio] = useState(16/9); // Default aspect ratio
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [smoothness, setSmoothness] = useState(0.1);
+  const [isVRSupported, setIsVRSupported] = useState(false);
+  const [isVRActive, setIsVRActive] = useState(false);
 
   const constrainValue = useCallback((value: number, min: number, max: number) => {
     return MathUtils.clamp(value, min, max);
@@ -197,12 +201,42 @@ export const LumaSplatViewer: React.FC = () => {
     requestAnimationFrame(animate);
   }, [cameraState]);
 
+  const handleEnterVR = useCallback(async () => {
+    if (!webXRManagerRef.current) return;
+
+    if (isVRActive) {
+      webXRManagerRef.current.exitVR();
+    } else {
+      const success = await webXRManagerRef.current.enterVR();
+      if (success) {
+        console.log('PIXEL8D: Entered VR mode');
+        // Set optimal theater mode for Quest 3
+        webXRManagerRef.current.setTheaterMode('360');
+      }
+    }
+  }, [isVRActive]);
+
+  const handleVRSessionStart = useCallback(() => {
+    setIsVRActive(true);
+    console.log('PIXEL8D: VR session started');
+  }, []);
+
+  const handleVRSessionEnd = useCallback(() => {
+    setIsVRActive(false);
+    console.log('PIXEL8D: VR session ended');
+  }, []);
+
   useEffect(() => {
     const initViewer = async () => {
       if (!canvasRef.current) return;
 
       try {
         console.log('PIXEL8D: Initializing viewer...');
+        
+        // Check VR support
+        const vrSupported = await WebXRManager.isVRSupported();
+        setIsVRSupported(vrSupported);
+        console.log('PIXEL8D: VR supported:', vrSupported);
         
         // Get initial container dimensions and aspect ratio
         const { width, height, aspectRatio: initialAspectRatio } = getContainerDimensions();
@@ -211,13 +245,29 @@ export const LumaSplatViewer: React.FC = () => {
         // Dynamically import the Luma library
         const { LumaSplatsThree } = await import('@lumaai/luma-web');
 
-        // Initialize Three.js scene with performance optimizations
+        // Initialize Three.js scene with VR optimizations
         const renderer = new WebGLRenderer({
           canvas: canvasRef.current,
-          antialias: false, // Luma performance recommendation
+          antialias: false, // VR performance optimization
           alpha: true,
           powerPreference: "high-performance"
         });
+        
+        // Initialize WebXR Manager
+        const webXRManager = new WebXRManager(
+          renderer,
+          camera,
+          scene,
+          {
+            onSessionStart: handleVRSessionStart,
+            onSessionEnd: handleVRSessionEnd
+          }
+        );
+        
+        if (vrSupported) {
+          await webXRManager.initializeVR();
+          webXRManagerRef.current = webXRManager;
+        }
         
         const updateSize = () => {
           const { width, height, aspectRatio: newAspectRatio } = getContainerDimensions();
@@ -282,7 +332,7 @@ export const LumaSplatViewer: React.FC = () => {
         const splats = new LumaSplatsThree({
           source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
           particleRevealEnabled: true,
-          enableThreeShaderIntegration: false, // Performance optimization
+          enableThreeShaderIntegration: false, // VR performance optimization
           loadingAnimationEnabled: true
         });
 
@@ -321,15 +371,25 @@ export const LumaSplatViewer: React.FC = () => {
           console.log('PIXEL8D: Camera initialization complete');
         }, 200);
 
-        // Animation loop
+        // VR-optimized animation loop
         const animate = () => {
           if (rendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
-            controlsRef.current.update();
+            // Only update controls if not in VR (WebXR handles camera in VR)
+            if (!webXRManagerRef.current?.isVRActive()) {
+              controlsRef.current.update();
+            }
             rendererRef.current.render(sceneRef.current, cameraRef.current);
           }
-          animationIdRef.current = requestAnimationFrame(animate);
+          
+          // Use WebXR's animation loop when in VR, otherwise use requestAnimationFrame
+          if (webXRManagerRef.current?.isVRActive()) {
+            // WebXR handles the animation loop automatically
+          } else {
+            animationIdRef.current = requestAnimationFrame(animate);
+          }
         };
-        animate();
+        
+        renderer.setAnimationLoop(animate);
 
         // Handle resize with proper aspect ratio updates
         const handleResize = () => updateSize();
@@ -358,8 +418,11 @@ export const LumaSplatViewer: React.FC = () => {
       if (rendererRef.current) {
         rendererRef.current.dispose();
       }
+      if (webXRManagerRef.current) {
+        webXRManagerRef.current.exitVR();
+      }
     };
-  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength]);
+  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength, handleVRSessionStart, handleVRSessionEnd]);
 
   // Force initial camera state update after component mounts
   useEffect(() => {
@@ -418,6 +481,9 @@ export const LumaSplatViewer: React.FC = () => {
         isLoading={isLoading}
         presets={CAMERA_PRESETS}
         onPresetSelect={handlePresetSelect}
+        onEnterVR={handleEnterVR}
+        isVRSupported={isVRSupported}
+        isVRActive={isVRActive}
       />
       
       <div className="flex-1 flex">
@@ -433,6 +499,9 @@ export const LumaSplatViewer: React.FC = () => {
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Loading PIXEL8D...</p>
                 <p className="text-xs text-muted-foreground mt-2">Initializing Gaussian Splat viewer</p>
+                {isVRSupported && (
+                  <p className="text-xs text-primary mt-1">✓ VR Ready</p>
+                )}
               </div>
             </div>
           )}
@@ -452,13 +521,15 @@ export const LumaSplatViewer: React.FC = () => {
           )}
         </div>
         
-        <CameraControls
-          cameraState={cameraState}
-          onCameraChange={handleCameraChange}
-          bounds={BOUNDS}
-          smoothness={smoothness}
-          onSmoothnessChange={setSmoothness}
-        />
+        {!isVRActive && (
+          <CameraControls
+            cameraState={cameraState}
+            onCameraChange={handleCameraChange}
+            bounds={BOUNDS}
+            smoothness={smoothness}
+            onSmoothnessChange={setSmoothness}
+          />
+        )}
       </div>
     </div>
   );
