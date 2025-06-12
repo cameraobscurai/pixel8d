@@ -45,6 +45,7 @@ export const LumaSplatViewer: React.FC = () => {
   const splatsRef = useRef<any>(null);
   const animationIdRef = useRef<number>();
   const isManualUpdateRef = useRef(false);
+  const hasInitializedRef = useRef(false);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
   const [aspectRatio, setAspectRatio] = useState(16/9); // Default aspect ratio
@@ -87,7 +88,7 @@ export const LumaSplatViewer: React.FC = () => {
   }, []);
 
   const updateCameraFromControls = useCallback(() => {
-    if (!cameraRef.current || !controlsRef.current || isManualUpdateRef.current) return;
+    if (!cameraRef.current || !controlsRef.current || isManualUpdateRef.current || !hasInitializedRef.current) return;
 
     const camera = cameraRef.current;
     const position = camera.position;
@@ -112,6 +113,7 @@ export const LumaSplatViewer: React.FC = () => {
   const updateCameraManually = useCallback(() => {
     if (!cameraRef.current || !controlsRef.current) return;
 
+    console.log('PIXEL8D: Updating camera manually to:', cameraState);
     isManualUpdateRef.current = true;
     
     const camera = cameraRef.current;
@@ -145,9 +147,11 @@ export const LumaSplatViewer: React.FC = () => {
     // Allow OrbitControls to take over again after a brief delay
     setTimeout(() => {
       isManualUpdateRef.current = false;
+      hasInitializedRef.current = true;
     }, 100);
   }, [cameraState, aspectRatio, calculateFOVFromFocalLength]);
 
+  // Helper function to animate camera to a preset
   const animateToPreset = useCallback((preset: CameraPreset) => {
     if (!cameraRef.current) return;
 
@@ -235,8 +239,21 @@ export const LumaSplatViewer: React.FC = () => {
         // Add atmospheric fog for enhanced visuals
         scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
         
-        // Create camera with proper initial aspect ratio
+        // Create camera with proper initial aspect ratio and initial state
         const camera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
+        
+        // Set initial camera position and rotation
+        camera.position.set(INITIAL_CAMERA_STATE.position.x, INITIAL_CAMERA_STATE.position.y, INITIAL_CAMERA_STATE.position.z);
+        camera.rotation.set(
+          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.pitch),
+          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.yaw),
+          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.roll)
+        );
+        
+        // Set initial FOV from focal length
+        const initialFOV = calculateFOVFromFocalLength(INITIAL_CAMERA_STATE.focalLength, initialAspectRatio);
+        camera.fov = initialFOV;
+        camera.updateProjectionMatrix();
 
         // Initialize OrbitControls with proper bounds
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -253,6 +270,10 @@ export const LumaSplatViewer: React.FC = () => {
         controls.panSpeed = 0.8;
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
+        
+        // Update controls to match initial camera state
+        controls.target.set(0, 0, 0);
+        controls.update();
 
         // Add event listener for controls change
         controls.addEventListener('change', updateCameraFromControls);
@@ -294,6 +315,12 @@ export const LumaSplatViewer: React.FC = () => {
         controlsRef.current = controls;
         splatsRef.current = splats;
 
+        // Mark as initialized after everything is set up
+        setTimeout(() => {
+          hasInitializedRef.current = true;
+          console.log('PIXEL8D: Camera initialization complete');
+        }, 200);
+
         // Animation loop
         const animate = () => {
           if (rendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
@@ -332,10 +359,14 @@ export const LumaSplatViewer: React.FC = () => {
         rendererRef.current.dispose();
       }
     };
-  }, [updateCameraFromControls, getContainerDimensions]);
+  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength]);
 
+  // Force initial camera state update after component mounts
   useEffect(() => {
-    updateCameraManually();
+    if (cameraRef.current && controlsRef.current && !hasInitializedRef.current) {
+      console.log('PIXEL8D: Setting initial camera state');
+      updateCameraManually();
+    }
   }, [updateCameraManually]);
 
   useEffect(() => {
