@@ -279,7 +279,6 @@ export const LumaSplatViewer: React.FC = () => {
     // Allow OrbitControls to take over again after a brief delay
     setTimeout(() => {
       isManualUpdateRef.current = false;
-      hasInitializedRef.current = true;
     }, 100);
   }, [cameraState, aspectRatio, calculateFOVFromFocalLength, isOrthographic, updateOrthographicCamera, getCurrentCamera]);
 
@@ -499,6 +498,13 @@ export const LumaSplatViewer: React.FC = () => {
       updateCameraManually();
     }
   }, [updateCameraManually, getCurrentCamera]);
+
+  // Add effect to update camera when state changes from controls
+  useEffect(() => {
+    if (hasInitializedRef.current && !isManualUpdateRef.current) {
+      updateCameraManually();
+    }
+  }, [cameraState, updateCameraManually]);
 
   useEffect(() => {
     if (controlsRef.current) {
