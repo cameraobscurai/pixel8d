@@ -33,14 +33,32 @@ const CAMERA_PRESETS: CameraPreset[] = [
 export const LumaSplatViewer: React.FC = () => {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lumaViewer, setLumaViewer] = useState<any>(null);
 
   useEffect(() => {
     console.log('PIXEL8D: Initializing viewer...');
     
     const initViewer = async () => {
       try {
-        // Simulate loading time
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!viewerRef.current) return;
+
+        // Import Luma AI web viewer
+        const { LumaSplatsThree } = await import('@lumaai/luma-web');
+        
+        // Create a default capture URL (you can replace this with any Luma AI capture)
+        const captureUrl = 'https://lumalabs.ai/embed/4da7d439-56b7-4bd0-8dd7-0c64a7e3b37c?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false';
+        
+        // Create iframe element for the Luma viewer
+        const iframe = document.createElement('iframe');
+        iframe.src = captureUrl;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.title = 'Luma AI Gaussian Splat Viewer';
+        
+        // Clear the container and add the iframe
+        viewerRef.current.innerHTML = '';
+        viewerRef.current.appendChild(iframe);
         
         console.log('PIXEL8D: Luma splats loaded successfully');
         console.log('PIXEL8D: Camera initialization complete');
@@ -58,10 +76,12 @@ export const LumaSplatViewer: React.FC = () => {
 
   const handleReset = () => {
     console.log('PIXEL8D: Resetting camera...');
+    // In a real implementation, this would reset the camera view
   };
 
   const handlePresetSelect = (preset: CameraPreset) => {
     console.log('PIXEL8D: Applying camera preset:', preset.name);
+    // In a real implementation, this would apply the camera preset
   };
 
   return (
@@ -83,16 +103,7 @@ export const LumaSplatViewer: React.FC = () => {
               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-muted-foreground">Loading Gaussian Splats...</p>
             </div>
-          ) : (
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                PIXEL8D Viewer
-              </h2>
-              <p className="text-muted-foreground">
-                Professional Gaussian Splat viewing experience
-              </p>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
