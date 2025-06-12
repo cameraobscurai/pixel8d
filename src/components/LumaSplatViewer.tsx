@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
@@ -45,6 +44,7 @@ export const LumaSplatViewer: React.FC = () => {
   const controlsRef = useRef<OrbitControls | null>(null);
   const splatsRef = useRef<any>(null);
   const animationIdRef = useRef<number>();
+  const isManualUpdateRef = useRef(false);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,9 +55,34 @@ export const LumaSplatViewer: React.FC = () => {
     return MathUtils.clamp(value, min, max);
   }, []);
 
-  const updateCamera = useCallback(() => {
+  const updateCameraFromControls = useCallback(() => {
+    if (!cameraRef.current || !controlsRef.current || isManualUpdateRef.current) return;
+
+    const camera = cameraRef.current;
+    const position = camera.position;
+    
+    // Extract rotation from camera's current orientation
+    const rotation = {
+      roll: MathUtils.radToDeg(camera.rotation.z),
+      pitch: MathUtils.radToDeg(camera.rotation.x),
+      yaw: MathUtils.radToDeg(camera.rotation.y)
+    };
+
+    // Calculate focal length from current FOV
+    const focalLength = 36 / (2 * Math.tan(MathUtils.degToRad(camera.fov / 2)));
+
+    setCameraState({
+      position: { x: position.x, y: position.y, z: position.z },
+      rotation,
+      focalLength
+    });
+  }, []);
+
+  const updateCameraManually = useCallback(() => {
     if (!cameraRef.current || !controlsRef.current) return;
 
+    isManualUpdateRef.current = true;
+    
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     const { position, rotation, focalLength } = cameraState;
@@ -77,9 +102,16 @@ export const LumaSplatViewer: React.FC = () => {
     camera.fov = fov;
     camera.updateProjectionMatrix();
 
-    // Update OrbitControls target
+    // Update OrbitControls to match the new camera state
+    controls.object.position.copy(camera.position);
+    controls.object.rotation.copy(camera.rotation);
     controls.target.set(0, 0, 0);
     controls.update();
+
+    // Allow OrbitControls to take over again after a brief delay
+    setTimeout(() => {
+      isManualUpdateRef.current = false;
+    }, 100);
   }, [cameraState]);
 
   const animateToPreset = useCallback((preset: CameraPreset) => {
@@ -88,6 +120,8 @@ export const LumaSplatViewer: React.FC = () => {
     const startState = { ...cameraState };
     const duration = 1000; // 1 second
     const startTime = performance.now();
+    
+    isManualUpdateRef.current = true;
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
@@ -114,6 +148,11 @@ export const LumaSplatViewer: React.FC = () => {
 
       if (progress < 1) {
         requestAnimationFrame(animate);
+      } else {
+        // Re-enable OrbitControls after animation completes
+        setTimeout(() => {
+          isManualUpdateRef.current = false;
+        }, 100);
       }
     };
 
@@ -177,6 +216,9 @@ export const LumaSplatViewer: React.FC = () => {
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
 
+        // Add event listener for controls change
+        controls.addEventListener('change', updateCameraFromControls);
+
         // Load Luma Splats with proper error handling
         const splats = new LumaSplatsThree({
           source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
@@ -230,6 +272,7 @@ export const LumaSplatViewer: React.FC = () => {
 
         return () => {
           window.removeEventListener('resize', handleResize);
+          controls.removeEventListener('change', updateCameraFromControls);
         };
       } catch (err) {
         console.error('PIXEL8D: Failed to initialize viewer:', err);
@@ -251,11 +294,11 @@ export const LumaSplatViewer: React.FC = () => {
         rendererRef.current.dispose();
       }
     };
-  }, []);
+  }, [updateCameraFromControls]);
 
   useEffect(() => {
-    updateCamera();
-  }, [updateCamera]);
+    updateCameraManually();
+  }, [updateCameraManually]);
 
   useEffect(() => {
     if (controlsRef.current) {
