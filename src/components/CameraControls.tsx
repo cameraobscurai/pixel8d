@@ -9,12 +9,14 @@ interface CameraState {
   position: { x: number; y: number; z: number };
   rotation: { roll: number; pitch: number; yaw: number };
   focalLength: number;
+  orthographicZoom: number;
 }
 
 interface Bounds {
   position: { min: number; max: number };
   rotation: { min: number; max: number };
   focalLength: { min: number; max: number };
+  orthographicZoom: { min: number; max: number };
 }
 
 interface CameraControlsProps {
@@ -23,6 +25,7 @@ interface CameraControlsProps {
   bounds: Bounds;
   smoothness: number;
   onSmoothnessChange: (value: number) => void;
+  isOrthographic: boolean;
 }
 
 export const CameraControls: React.FC<CameraControlsProps> = ({
@@ -30,7 +33,8 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   onCameraChange,
   bounds,
   smoothness,
-  onSmoothnessChange
+  onSmoothnessChange,
+  isOrthographic
 }) => {
   const handleInputChange = (
     category: 'position' | 'rotation',
@@ -50,6 +54,10 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
     onCameraChange({ focalLength: value[0] });
   };
 
+  const handleOrthographicZoomChange = (value: number[]) => {
+    onCameraChange({ orthographicZoom: value[0] });
+  };
+
   const handleSmoothnessChange = (value: number[]) => {
     onSmoothnessChange(value[0]);
   };
@@ -57,26 +65,48 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   return (
     <Card className="w-80 p-6 bg-muted/50 border-border">
       <div className="space-y-6">
-        {/* Focal Length */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm font-medium">focal length</Label>
-            <span className="text-xs text-muted-foreground">mm</span>
-          </div>
-          <div className="bg-muted rounded-md p-3 mb-3">
-            <div className="text-2xl font-mono">
-              {cameraState.focalLength.toFixed(2)}
+        {/* Camera-specific controls */}
+        {isOrthographic ? (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium">zoom</Label>
+              <span className="text-xs text-muted-foreground">×</span>
             </div>
+            <div className="bg-muted rounded-md p-3 mb-3">
+              <div className="text-2xl font-mono">
+                {cameraState.orthographicZoom.toFixed(2)}×
+              </div>
+            </div>
+            <Slider
+              value={[cameraState.orthographicZoom]}
+              onValueChange={handleOrthographicZoomChange}
+              min={bounds.orthographicZoom.min}
+              max={bounds.orthographicZoom.max}
+              step={0.01}
+              className="w-full"
+            />
           </div>
-          <Slider
-            value={[cameraState.focalLength]}
-            onValueChange={handleFocalLengthChange}
-            min={bounds.focalLength.min}
-            max={bounds.focalLength.max}
-            step={0.1}
-            className="w-full"
-          />
-        </div>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium">focal length</Label>
+              <span className="text-xs text-muted-foreground">mm</span>
+            </div>
+            <div className="bg-muted rounded-md p-3 mb-3">
+              <div className="text-2xl font-mono">
+                {cameraState.focalLength.toFixed(2)}
+              </div>
+            </div>
+            <Slider
+              value={[cameraState.focalLength]}
+              onValueChange={handleFocalLengthChange}
+              min={bounds.focalLength.min}
+              max={bounds.focalLength.max}
+              step={0.1}
+              className="w-full"
+            />
+          </div>
+        )}
 
         {/* Smoothness Control */}
         <div>

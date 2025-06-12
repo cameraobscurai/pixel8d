@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, OrthographicCamera, Scene, Vector3, MathUtils, FogExp2, Color, Camera, Box3 } from 'three';
 import { OrbitControls } from 'three-stdlib';
@@ -10,6 +9,7 @@ interface CameraState {
   position: { x: number; y: number; z: number };
   rotation: { roll: number; pitch: number; yaw: number };
   focalLength: number;
+  orthographicZoom: number;
 }
 
 interface CameraPreset {
@@ -17,25 +17,28 @@ interface CameraPreset {
   position: { x: number; y: number; z: number };
   rotation: { roll: number; pitch: number; yaw: number };
   focalLength: number;
+  orthographicZoom: number;
 }
 
 const INITIAL_CAMERA_STATE: CameraState = {
   position: { x: -2.76, y: 0.03, z: -2.25 },
   rotation: { roll: -179.35, pitch: -179.16, yaw: -50.84 },
-  focalLength: 20.10
+  focalLength: 20.10,
+  orthographicZoom: 1.0
 };
 
 const CAMERA_PRESETS: CameraPreset[] = [
-  { name: 'Front', position: { x: 0, y: 0, z: 3 }, rotation: { roll: 0, pitch: 0, yaw: 0 }, focalLength: 35 },
-  { name: 'Side', position: { x: 3, y: 0, z: 0 }, rotation: { roll: 0, pitch: 0, yaw: 90 }, focalLength: 35 },
-  { name: 'Top', position: { x: 0, y: 3, z: 0 }, rotation: { roll: 0, pitch: -90, yaw: 0 }, focalLength: 35 },
-  { name: 'Perspective', position: { x: 2, y: 1, z: 2 }, rotation: { roll: 0, pitch: -15, yaw: 45 }, focalLength: 28 }
+  { name: 'Front', position: { x: 0, y: 0, z: 3 }, rotation: { roll: 0, pitch: 0, yaw: 0 }, focalLength: 35, orthographicZoom: 1.0 },
+  { name: 'Side', position: { x: 3, y: 0, z: 0 }, rotation: { roll: 0, pitch: 0, yaw: 90 }, focalLength: 35, orthographicZoom: 1.0 },
+  { name: 'Top', position: { x: 0, y: 3, z: 0 }, rotation: { roll: 0, pitch: -90, yaw: 0 }, focalLength: 35, orthographicZoom: 1.0 },
+  { name: 'Perspective', position: { x: 2, y: 1, z: 2 }, rotation: { roll: 0, pitch: -15, yaw: 45 }, focalLength: 28, orthographicZoom: 0.8 }
 ];
 
 const BOUNDS = {
   position: { min: -10, max: 10 },
   rotation: { min: -180, max: 180 },
-  focalLength: { min: 10, max: 100 }
+  focalLength: { min: 10, max: 100 },
+  orthographicZoom: { min: 0.1, max: 5.0 }
 };
 
 const QUALITY_PRESETS = {
@@ -56,6 +59,7 @@ export const LumaSplatViewer: React.FC = () => {
   const animationIdRef = useRef<number>();
   const isManualUpdateRef = useRef(false);
   const hasInitializedRef = useRef(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout>();
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
   const [aspectRatio, setAspectRatio] = useState(16/9);
@@ -108,9 +112,9 @@ export const LumaSplatViewer: React.FC = () => {
     const camera = orthographicCameraRef.current;
     const bbox = new Box3().setFromObject(splatsRef.current);
     const size = bbox.getSize(new Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
+    const maxDim = Math.max(size.x, size.y, size.z) || 5; // Fallback to 5 if no size
     
-    const zoom = cameraState.focalLength / 35; // Normalize to standard 35mm
+    const zoom = cameraState.orthographicZoom;
     const frustumSize = maxDim * 2 / zoom;
     
     camera.left = -frustumSize * aspectRatio / 2;
@@ -118,7 +122,7 @@ export const LumaSplatViewer: React.FC = () => {
     camera.top = frustumSize / 2;
     camera.bottom = -frustumSize / 2;
     camera.updateProjectionMatrix();
-  }, [cameraState.focalLength, aspectRatio]);
+  }, [cameraState.orthographicZoom, aspectRatio]);
 
   const switchCameraMode = useCallback(() => {
     const currentCamera = getCurrentCamera();
@@ -229,11 +233,12 @@ export const LumaSplatViewer: React.FC = () => {
     // Calculate focal length from current FOV using proper aspect ratio
     const focalLength = calculateFocalLengthFromFOV(camera.fov, aspectRatio);
 
-    setCameraState({
+    setCameraState(prev => ({
+      ...prev,
       position: { x: position.x, y: position.y, z: position.z },
       rotation,
       focalLength
-    });
+    }));
   }, [aspectRatio, calculateFocalLengthFromFOV, getCurrentCamera]);
 
   const updateCameraManually = useCallback(() => {
@@ -246,7 +251,7 @@ export const LumaSplatViewer: React.FC = () => {
     if (!camera) return;
 
     const controls = controlsRef.current;
-    const { position, rotation, focalLength } = cameraState;
+    const { position, rotation, focalLength, orthographicZoom } = cameraState;
 
     // Update camera position
     camera.position.set(position.x, position.y, position.z);
@@ -309,7 +314,8 @@ export const LumaSplatViewer: React.FC = () => {
           pitch: startState.rotation.pitch + (preset.rotation.pitch - startState.rotation.pitch) * easeProgress,
           yaw: startState.rotation.yaw + (preset.rotation.yaw - startState.rotation.yaw) * easeProgress,
         },
-        focalLength: startState.focalLength + (preset.focalLength - startState.focalLength) * easeProgress
+        focalLength: startState.focalLength + (preset.focalLength - startState.focalLength) * easeProgress,
+        orthographicZoom: startState.orthographicZoom + (preset.orthographicZoom - startState.orthographicZoom) * easeProgress
       };
 
       setCameraState(interpolatedState);
@@ -499,13 +505,6 @@ export const LumaSplatViewer: React.FC = () => {
     }
   }, [updateCameraManually, getCurrentCamera]);
 
-  // Add effect to update camera when state changes from controls
-  useEffect(() => {
-    if (hasInitializedRef.current && !isManualUpdateRef.current) {
-      updateCameraManually();
-    }
-  }, [cameraState, updateCameraManually]);
-
   useEffect(() => {
     if (controlsRef.current) {
       controlsRef.current.dampingFactor = smoothness;
@@ -513,6 +512,11 @@ export const LumaSplatViewer: React.FC = () => {
   }, [smoothness]);
 
   const handleCameraChange = useCallback((updates: Partial<CameraState>) => {
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
     setCameraState(prev => {
       const newState = { ...prev, ...updates };
       
@@ -531,10 +535,19 @@ export const LumaSplatViewer: React.FC = () => {
       if (newState.focalLength) {
         newState.focalLength = constrainValue(newState.focalLength, BOUNDS.focalLength.min, BOUNDS.focalLength.max);
       }
+
+      if (newState.orthographicZoom) {
+        newState.orthographicZoom = constrainValue(newState.orthographicZoom, BOUNDS.orthographicZoom.min, BOUNDS.orthographicZoom.max);
+      }
       
       return newState;
     });
-  }, [constrainValue]);
+
+    // Debounce the camera update to reduce jumpiness
+    debounceTimerRef.current = setTimeout(() => {
+      updateCameraManually();
+    }, 50);
+  }, [constrainValue, updateCameraManually]);
 
   const resetCamera = useCallback(() => {
     const preset = { name: 'Reset', ...INITIAL_CAMERA_STATE };
@@ -630,6 +643,7 @@ export const LumaSplatViewer: React.FC = () => {
             bounds={BOUNDS}
             smoothness={smoothness}
             onSmoothnessChange={setSmoothness}
+            isOrthographic={isOrthographic}
           />
         )}
       </div>
