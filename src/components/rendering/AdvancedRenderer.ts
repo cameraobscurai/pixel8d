@@ -1,4 +1,3 @@
-
 import { WebGLRenderer, PerspectiveCamera, Scene, WebGLRenderTarget, RGBAFormat, FloatType, Vector2, DataTexture, NearestFilter, LinearFilter } from 'three';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -258,5 +257,10 @@ export class AdvancedRenderer {
     this.disposeRenderTargets();
     this.renderer.dispose();
     console.log('PIXEL8D: AdvancedRenderer disposed');
+  }
+  
+  // Public getter for accessing the underlying Three.js renderer
+  getRenderer(): WebGLRenderer {
+    return this.renderer;
   }
 }

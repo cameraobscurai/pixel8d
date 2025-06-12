@@ -297,7 +297,7 @@ export const LumaSplatViewer: React.FC = () => {
           
           // Capture cubemap for realistic lighting
           try {
-            splats.captureCubemap(advancedRenderer.renderer).then((texture: any) => {
+            splats.captureCubemap(advancedRenderer.getRenderer()).then((texture: any) => {
               if (texture) {
                 scene.environment = texture;
                 console.log('PIXEL8D: Environment cubemap captured');
