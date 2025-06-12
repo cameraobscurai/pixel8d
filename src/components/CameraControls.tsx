@@ -55,8 +55,11 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   };
 
   return (
-    <Card className="w-80 p-6 glass-panel border-r border-white/20 dark:border-black/20">
-      <div className="space-y-6">
+    <div className="glass-container glass-container--panel border-r border-white/20 dark:border-black/20">
+      <div className="glass-filter"></div>
+      <div className="glass-overlay"></div>
+      <div className="glass-specular"></div>
+      <div className="glass-content glass-content--panel space-y-6">
         {/* Focal Length Control */}
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -139,6 +142,6 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           ))}
         </div>
       </div>
-    </Card>
+    </div>
   );
 };

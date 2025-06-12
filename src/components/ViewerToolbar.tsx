@@ -36,8 +36,11 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
   onExportScreenshot
 }) => {
   return (
-    <div className="glass-toolbar border-b border-white/20 dark:border-black/20 p-6 relative z-10">
-      <div className="flex items-center justify-between max-w-7xl mx-auto">
+    <div className="glass-container glass-container--toolbar border-b border-white/20 dark:border-black/20 relative z-10">
+      <div className="glass-filter"></div>
+      <div className="glass-overlay"></div>
+      <div className="glass-specular"></div>
+      <div className="glass-content glass-content--toolbar">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
             pixel8d
@@ -124,6 +127,15 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* SVG Filter for glass distortion effect */}
+      <svg className="glass-svg-filters">
+        <filter id="lg-dist" x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="2" seed="92" result="noise" />
+          <feGaussianBlur in="noise" stdDeviation="2" result="blurred" />
+          <feDisplacementMap in="SourceGraphic" in2="blurred" scale="70" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
     </div>
   );
 };

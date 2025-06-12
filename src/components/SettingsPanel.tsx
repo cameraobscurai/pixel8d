@@ -31,8 +31,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onSemanticMaskChange
 }) => {
   return (
-    <div className="w-80 glass-panel border-l border-white/20 dark:border-black/20">
-      <div className="p-6 space-y-8">
+    <div className="glass-container glass-container--panel border-l border-white/20 dark:border-black/20">
+      <div className="glass-filter"></div>
+      <div className="glass-overlay"></div>
+      <div className="glass-specular"></div>
+      <div className="glass-content glass-content--panel space-y-8">
         <div>
           <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
             camera settings
