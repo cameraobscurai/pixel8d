@@ -56,11 +56,11 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   };
 
   return (
-    <div className="fixed left-0 top-20 bottom-0 z-40 w-80 bg-white/85 dark:bg-black/85 backdrop-blur-xl border-r border-white/20 dark:border-black/20 overflow-y-auto">
+    <div className="fixed left-0 top-20 bottom-0 z-40 w-80 bg-white/95 dark:bg-black/95 backdrop-blur-xl border-r border-white/30 dark:border-black/30 overflow-y-auto shadow-xl">
       <div className="p-6 space-y-6">
         {/* Focal Length Control */}
-        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
-          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg">
+        <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
+          <div className="bg-white/80 dark:bg-black/80 backdrop-blur-lg border border-white/40 dark:border-black/40 p-4 rounded-lg shadow-lg">
             <div className="flex items-center justify-between mb-2">
               <Label className="text-sm font-light text-slate-600 dark:text-slate-400">focal length</Label>
               <span className="text-xs text-slate-500 dark:text-slate-500">mm</span>
@@ -82,8 +82,8 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
         </LiquidGlass>
 
         {/* Smoothness Control */}
-        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
-          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg">
+        <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
+          <div className="bg-white/80 dark:bg-black/80 backdrop-blur-lg border border-white/40 dark:border-black/40 p-4 rounded-lg shadow-lg">
             <div className="flex items-center justify-between mb-2">
               <Label className="text-sm font-light text-slate-600 dark:text-slate-400">smoothness</Label>
               <span className="text-xs text-slate-500 dark:text-slate-500">{(smoothness * 100).toFixed(0)}%</span>
@@ -102,8 +102,8 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
         <div className="h-px bg-gradient-to-r from-transparent via-slate-300/50 dark:via-slate-600/50 to-transparent" />
 
         {/* Position Controls */}
-        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
-          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg space-y-4">
+        <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
+          <div className="bg-white/80 dark:bg-black/80 backdrop-blur-lg border border-white/40 dark:border-black/40 p-4 rounded-lg shadow-lg space-y-4">
             <h3 className="text-sm font-light text-slate-600 dark:text-slate-400 uppercase tracking-wide">position</h3>
             {['x', 'y', 'z'].map((axis) => (
               <div key={axis} className="flex items-center justify-between">
@@ -123,8 +123,8 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
         <div className="h-px bg-gradient-to-r from-transparent via-slate-300/50 dark:via-slate-600/50 to-transparent" />
 
         {/* Rotation Controls */}
-        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
-          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg space-y-4">
+        <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
+          <div className="bg-white/80 dark:bg-black/80 backdrop-blur-lg border border-white/40 dark:border-black/40 p-4 rounded-lg shadow-lg space-y-4">
             <h3 className="text-sm font-light text-slate-600 dark:text-slate-400 uppercase tracking-wide">rotation</h3>
             {[
               { key: 'roll', label: 'roll' },
