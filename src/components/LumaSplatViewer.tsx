@@ -50,7 +50,7 @@ export const LumaSplatViewer: React.FC = () => {
   const webXRManagerRef = useRef<WebXRManager | null>(null);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
-  const [aspectRatio, setAspectRatio] = useState(16/9); // Default aspect ratio
+  const [aspectRatio, setAspectRatio] = useState(16/9);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [smoothness, setSmoothness] = useState(0.1);
@@ -61,21 +61,17 @@ export const LumaSplatViewer: React.FC = () => {
     return MathUtils.clamp(value, min, max);
   }, []);
 
-  // Helper function to calculate FOV from focal length with proper aspect ratio
   const calculateFOVFromFocalLength = useCallback((focalLength: number, currentAspectRatio: number) => {
-    // Use the sensor height (24mm for full frame) adjusted for aspect ratio
     const sensorHeight = 24;
     const fov = 2 * Math.atan(sensorHeight / (2 * focalLength)) * (180 / Math.PI);
-    return Math.max(10, Math.min(120, fov)); // Clamp FOV to reasonable bounds
+    return Math.max(10, Math.min(120, fov));
   }, []);
 
-  // Helper function to calculate focal length from FOV with proper aspect ratio
   const calculateFocalLengthFromFOV = useCallback((fov: number, currentAspectRatio: number) => {
     const sensorHeight = 24;
     return sensorHeight / (2 * Math.tan(MathUtils.degToRad(fov / 2)));
   }, []);
 
-  // Get container dimensions and calculate aspect ratio
   const getContainerDimensions = useCallback(() => {
     const container = canvasRef.current?.parentElement;
     if (container) {
@@ -83,12 +79,11 @@ export const LumaSplatViewer: React.FC = () => {
       const height = container.clientHeight;
       const newAspectRatio = width / height;
       
-      // Ensure aspect ratio is valid
       if (isFinite(newAspectRatio) && newAspectRatio > 0) {
         return { width, height, aspectRatio: newAspectRatio };
       }
     }
-    return { width: 1920, height: 1080, aspectRatio: 16/9 }; // Fallback
+    return { width: 1920, height: 1080, aspectRatio: 16/9 };
   }, []);
 
   const updateCameraFromControls = useCallback(() => {
@@ -97,14 +92,12 @@ export const LumaSplatViewer: React.FC = () => {
     const camera = cameraRef.current;
     const position = camera.position;
     
-    // Extract rotation from camera's current orientation
     const rotation = {
       roll: MathUtils.radToDeg(camera.rotation.z),
       pitch: MathUtils.radToDeg(camera.rotation.x),
       yaw: MathUtils.radToDeg(camera.rotation.y)
     };
 
-    // Calculate focal length from current FOV using proper aspect ratio
     const focalLength = calculateFocalLengthFromFOV(camera.fov, aspectRatio);
 
     setCameraState({
@@ -124,43 +117,36 @@ export const LumaSplatViewer: React.FC = () => {
     const controls = controlsRef.current;
     const { position, rotation, focalLength } = cameraState;
 
-    // Update camera position
     camera.position.set(position.x, position.y, position.z);
 
-    // Update camera rotation (convert degrees to radians)
     camera.rotation.set(
       MathUtils.degToRad(rotation.pitch),
       MathUtils.degToRad(rotation.yaw),
       MathUtils.degToRad(rotation.roll)
     );
 
-    // Update camera focal length with proper aspect ratio handling
     const fov = calculateFOVFromFocalLength(focalLength, aspectRatio);
     camera.fov = fov;
     
-    // Ensure aspect ratio is properly set
     camera.aspect = aspectRatio;
     camera.updateProjectionMatrix();
 
-    // Update OrbitControls to match the new camera state
     controls.object.position.copy(camera.position);
     controls.object.rotation.copy(camera.rotation);
     controls.target.set(0, 0, 0);
     controls.update();
 
-    // Allow OrbitControls to take over again after a brief delay
     setTimeout(() => {
       isManualUpdateRef.current = false;
       hasInitializedRef.current = true;
     }, 100);
   }, [cameraState, aspectRatio, calculateFOVFromFocalLength]);
 
-  // Helper function to animate camera to a preset
   const animateToPreset = useCallback((preset: CameraPreset) => {
     if (!cameraRef.current) return;
 
     const startState = { ...cameraState };
-    const duration = 1000; // 1 second
+    const duration = 1000;
     const startTime = performance.now();
     
     isManualUpdateRef.current = true;
@@ -169,7 +155,6 @@ export const LumaSplatViewer: React.FC = () => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Smooth easing function
       const easeProgress = 1 - Math.pow(1 - progress, 3);
 
       const interpolatedState: CameraState = {
@@ -191,7 +176,6 @@ export const LumaSplatViewer: React.FC = () => {
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        // Re-enable OrbitControls after animation completes
         setTimeout(() => {
           isManualUpdateRef.current = false;
         }, 100);
@@ -201,30 +185,52 @@ export const LumaSplatViewer: React.FC = () => {
     requestAnimationFrame(animate);
   }, [cameraState]);
 
+  // Lazy VR initialization
+  const initializeVR = useCallback(async () => {
+    if (webXRManagerRef.current || !rendererRef.current || !cameraRef.current || !sceneRef.current) return false;
+
+    console.log('PIXEL8D: Initializing VR on demand...');
+    
+    try {
+      const webXRManager = new WebXRManager(
+        rendererRef.current,
+        cameraRef.current,
+        sceneRef.current,
+        {
+          onSessionStart: () => setIsVRActive(true),
+          onSessionEnd: () => setIsVRActive(false)
+        }
+      );
+      
+      const success = await webXRManager.initializeVR();
+      if (success) {
+        webXRManagerRef.current = webXRManager;
+        console.log('PIXEL8D: VR initialized successfully');
+      }
+      return success;
+    } catch (error) {
+      console.warn('PIXEL8D: VR initialization failed:', error);
+      return false;
+    }
+  }, []);
+
   const handleEnterVR = useCallback(async () => {
-    if (!webXRManagerRef.current) return;
+    // Initialize VR only when user tries to use it
+    if (!webXRManagerRef.current) {
+      const success = await initializeVR();
+      if (!success) return;
+    }
 
     if (isVRActive) {
-      webXRManagerRef.current.exitVR();
+      webXRManagerRef.current?.exitVR();
     } else {
-      const success = await webXRManagerRef.current.enterVR();
+      const success = await webXRManagerRef.current?.enterVR();
       if (success) {
         console.log('PIXEL8D: Entered VR mode');
-        // Set optimal theater mode for Quest 3
-        webXRManagerRef.current.setTheaterMode('360');
+        webXRManagerRef.current?.setTheaterMode('360');
       }
     }
-  }, [isVRActive]);
-
-  const handleVRSessionStart = useCallback(() => {
-    setIsVRActive(true);
-    console.log('PIXEL8D: VR session started');
-  }, []);
-
-  const handleVRSessionEnd = useCallback(() => {
-    setIsVRActive(false);
-    console.log('PIXEL8D: VR session ended');
-  }, []);
+  }, [isVRActive, initializeVR]);
 
   useEffect(() => {
     const initViewer = async () => {
@@ -233,49 +239,28 @@ export const LumaSplatViewer: React.FC = () => {
       try {
         console.log('PIXEL8D: Initializing viewer...');
         
-        // Check VR support
+        // Check VR support but don't initialize yet
         const vrSupported = await WebXRManager.isVRSupported();
         setIsVRSupported(vrSupported);
         console.log('PIXEL8D: VR supported:', vrSupported);
         
-        // Get initial container dimensions and aspect ratio
         const { width, height, aspectRatio: initialAspectRatio } = getContainerDimensions();
         setAspectRatio(initialAspectRatio);
         
-        // Dynamically import the Luma library
         const { LumaSplatsThree } = await import('@lumaai/luma-web');
 
-        // Initialize Three.js scene with VR optimizations
+        // Optimized renderer setup
         const renderer = new WebGLRenderer({
           canvas: canvasRef.current,
-          antialias: false, // VR performance optimization
+          antialias: true,
           alpha: true,
           powerPreference: "high-performance"
         });
         
         const scene = new Scene();
-        
-        // Add atmospheric fog for enhanced visuals
         scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
         
-        // Create camera with proper initial aspect ratio and initial state
         const camera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
-        
-        // Initialize WebXR Manager AFTER scene and camera are created
-        const webXRManager = new WebXRManager(
-          renderer,
-          camera,
-          scene,
-          {
-            onSessionStart: handleVRSessionStart,
-            onSessionEnd: handleVRSessionEnd
-          }
-        );
-        
-        if (vrSupported) {
-          await webXRManager.initializeVR();
-          webXRManagerRef.current = webXRManager;
-        }
         
         const updateSize = () => {
           const { width, height, aspectRatio: newAspectRatio } = getContainerDimensions();
@@ -292,7 +277,7 @@ export const LumaSplatViewer: React.FC = () => {
         updateSize();
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         
-        // Set initial camera position and rotation
+        // Set initial camera state
         camera.position.set(INITIAL_CAMERA_STATE.position.x, INITIAL_CAMERA_STATE.position.y, INITIAL_CAMERA_STATE.position.z);
         camera.rotation.set(
           MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.pitch),
@@ -300,48 +285,41 @@ export const LumaSplatViewer: React.FC = () => {
           MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.roll)
         );
         
-        // Set initial FOV from focal length
         const initialFOV = calculateFOVFromFocalLength(INITIAL_CAMERA_STATE.focalLength, initialAspectRatio);
         camera.fov = initialFOV;
         camera.updateProjectionMatrix();
 
-        // Initialize OrbitControls with proper bounds
+        // Initialize controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = smoothness;
         controls.screenSpacePanning = false;
         
-        // Set bounded controls to prevent camera chaos
         controls.minDistance = 0.5;
         controls.maxDistance = 15;
-        controls.maxPolarAngle = Math.PI; // Allow full rotation
+        controls.maxPolarAngle = Math.PI;
         controls.minPolarAngle = 0;
         controls.enablePan = true;
         controls.panSpeed = 0.8;
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
         
-        // Update controls to match initial camera state
         controls.target.set(0, 0, 0);
         controls.update();
-
-        // Add event listener for controls change
         controls.addEventListener('change', updateCameraFromControls);
 
-        // Load Luma Splats with proper error handling
+        // Load splats
         const splats = new LumaSplatsThree({
           source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
           particleRevealEnabled: true,
-          enableThreeShaderIntegration: false, // VR performance optimization
+          enableThreeShaderIntegration: false,
           loadingAnimationEnabled: true
         });
 
-        // Handle successful load
         splats.onLoad = () => {
           console.log('PIXEL8D: Luma splats loaded successfully');
           setIsLoading(false);
           
-          // Capture cubemap for realistic lighting
           try {
             splats.captureCubemap(renderer).then((texture: any) => {
               if (texture) {
@@ -365,33 +343,22 @@ export const LumaSplatViewer: React.FC = () => {
         controlsRef.current = controls;
         splatsRef.current = splats;
 
-        // Mark as initialized after everything is set up
         setTimeout(() => {
           hasInitializedRef.current = true;
           console.log('PIXEL8D: Camera initialization complete');
         }, 200);
 
-        // VR-optimized animation loop
+        // Optimized animation loop - no VR overhead
         const animate = () => {
           if (rendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
-            // Only update controls if not in VR (WebXR handles camera in VR)
-            if (!webXRManagerRef.current?.isVRActive()) {
-              controlsRef.current.update();
-            }
+            controlsRef.current.update();
             rendererRef.current.render(sceneRef.current, cameraRef.current);
           }
-          
-          // Use WebXR's animation loop when in VR, otherwise use requestAnimationFrame
-          if (webXRManagerRef.current?.isVRActive()) {
-            // WebXR handles the animation loop automatically
-          } else {
-            animationIdRef.current = requestAnimationFrame(animate);
-          }
+          animationIdRef.current = requestAnimationFrame(animate);
         };
         
-        renderer.setAnimationLoop(animate);
+        animate();
 
-        // Handle resize with proper aspect ratio updates
         const handleResize = () => updateSize();
         window.addEventListener('resize', handleResize);
 
@@ -422,9 +389,8 @@ export const LumaSplatViewer: React.FC = () => {
         webXRManagerRef.current.exitVR();
       }
     };
-  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength, handleVRSessionStart, handleVRSessionEnd]);
+  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength]);
 
-  // Force initial camera state update after component mounts
   useEffect(() => {
     if (cameraRef.current && controlsRef.current && !hasInitializedRef.current) {
       console.log('PIXEL8D: Setting initial camera state');
@@ -442,7 +408,6 @@ export const LumaSplatViewer: React.FC = () => {
     setCameraState(prev => {
       const newState = { ...prev, ...updates };
       
-      // Apply constraints
       if (newState.position) {
         newState.position.x = constrainValue(newState.position.x, BOUNDS.position.min, BOUNDS.position.max);
         newState.position.y = constrainValue(newState.position.y, BOUNDS.position.min, BOUNDS.position.max);
