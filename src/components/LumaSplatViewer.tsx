@@ -28,6 +28,11 @@ const INITIAL_CAMERA_STATE: CameraState = {
   orthographicZoom: 1.0
 };
 
+const RESET_CAMERA_PRESET: CameraPreset = {
+  name: 'Reset',
+  ...INITIAL_CAMERA_STATE
+};
+
 const CAMERA_PRESETS: CameraPreset[] = [
   { name: 'Front', position: { x: 0, y: 0, z: 3 }, rotation: { roll: 0, pitch: 0, yaw: 0 }, focalLength: 35, orthographicZoom: 1.0 },
   { name: 'Side', position: { x: 3, y: 0, z: 0 }, rotation: { roll: 0, pitch: 0, yaw: 90 }, focalLength: 35, orthographicZoom: 1.0 },
@@ -137,8 +142,16 @@ export const LumaSplatViewer: React.FC = () => {
   }, [cameraState.orthographicZoom, aspectRatio]);
 
   const switchCameraMode = useCallback(() => {
+    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current) {
+      console.warn('PIXEL8D: Cameras or controls not ready for mode switch');
+      return;
+    }
+
     const currentCamera = getCurrentCamera();
-    if (!currentCamera || !controlsRef.current) return;
+    if (!currentCamera) {
+      console.warn('PIXEL8D: No current camera available');
+      return;
+    }
 
     console.log('PIXEL8D: Switching camera mode from', isOrthographic ? 'orthographic' : 'perspective');
 
@@ -146,34 +159,41 @@ export const LumaSplatViewer: React.FC = () => {
     const currentPos = currentCamera.position.clone();
     const currentRot = currentCamera.rotation.clone();
 
-    setIsOrthographic(prev => {
-      const newMode = !prev;
-      const newCamera = newMode ? orthographicCameraRef.current : perspectiveCameraRef.current;
-      
-      if (newCamera) {
-        // Transfer position and rotation
-        newCamera.position.copy(currentPos);
-        newCamera.rotation.copy(currentRot);
-        
-        if (newMode) {
-          updateOrthographicCamera();
-        } else {
-          const fov = calculateFOVFromFocalLength(cameraState.focalLength, aspectRatio);
-          (newCamera as PerspectiveCamera).fov = fov;
-          newCamera.updateProjectionMatrix();
-        }
+    // Toggle the mode
+    setIsOrthographic(prev => !prev);
+  }, [getCurrentCamera, isOrthographic]);
 
-        // Update controls to use new camera - THIS IS THE KEY FIX
-        controlsRef.current!.object = newCamera;
-        controlsRef.current!.target.set(0, 0, 0);
-        controlsRef.current!.update();
-        
-        console.log('PIXEL8D: Camera mode switched to', newMode ? 'orthographic' : 'perspective');
-      }
-      
-      return newMode;
-    });
-  }, [getCurrentCamera, updateOrthographicCamera, calculateFOVFromFocalLength, cameraState.focalLength, aspectRatio]);
+  // Handle camera mode changes with useEffect to avoid timing issues
+  useEffect(() => {
+    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current) return;
+
+    const newCamera = isOrthographic ? orthographicCameraRef.current : perspectiveCameraRef.current;
+    const controls = controlsRef.current;
+
+    console.log('PIXEL8D: Applying camera mode switch to', isOrthographic ? 'orthographic' : 'perspective');
+
+    // Get current camera for state transfer
+    const currentCamera = isOrthographic ? perspectiveCameraRef.current : orthographicCameraRef.current;
+    
+    // Transfer position and rotation from previous camera
+    newCamera.position.copy(currentCamera.position);
+    newCamera.rotation.copy(currentCamera.rotation);
+    
+    if (isOrthographic) {
+      updateOrthographicCamera();
+    } else {
+      const fov = calculateFOVFromFocalLength(cameraState.focalLength, aspectRatio);
+      (newCamera as PerspectiveCamera).fov = fov;
+      newCamera.updateProjectionMatrix();
+    }
+
+    // Update controls to use new camera
+    controls.object = newCamera;
+    controls.target.set(0, 0, 0);
+    controls.update();
+    
+    console.log('PIXEL8D: Camera mode switch complete');
+  }, [isOrthographic, updateOrthographicCamera, calculateFOVFromFocalLength, cameraState.focalLength, aspectRatio]);
 
   const exportScreenshot = useCallback(async (options: { 
     resolution: string; 
@@ -361,6 +381,8 @@ export const LumaSplatViewer: React.FC = () => {
   const animateToPreset = useCallback((preset: CameraPreset) => {
     if (!perspectiveCameraRef.current || !orthographicCameraRef.current) return;
 
+    console.log('PIXEL8D: Animating to preset:', preset.name);
+    
     const startState = { ...cameraState };
     const duration = 1000; // 1 second
     const startTime = performance.now();
@@ -395,6 +417,7 @@ export const LumaSplatViewer: React.FC = () => {
         requestAnimationFrame(animate);
       } else {
         // Re-enable OrbitControls after animation completes
+        console.log('PIXEL8D: Preset animation complete');
         setTimeout(() => {
           isManualUpdateRef.current = false;
         }, 100);
@@ -622,8 +645,8 @@ export const LumaSplatViewer: React.FC = () => {
   }, [constrainValue, updateCameraManually]);
 
   const resetCamera = useCallback(() => {
-    const preset = { name: 'Reset', ...INITIAL_CAMERA_STATE };
-    animateToPreset(preset);
+    console.log('PIXEL8D: Resetting camera to initial state');
+    animateToPreset(RESET_CAMERA_PRESET);
   }, [animateToPreset]);
 
   const handlePresetSelect = useCallback((preset: CameraPreset) => {
@@ -705,7 +728,7 @@ export const LumaSplatViewer: React.FC = () => {
         {showSettings ? (
           <SettingsPanel
             isOrthographic={isOrthographic}
-            onCameraModeChange={switchCameraMode}
+            onCameraModeChange={() => switchCameraMode()}
             qualityPreset={qualityPreset}
             onQualityChange={handleQualityChange}
             showGrid={showGrid}
