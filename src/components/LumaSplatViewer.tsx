@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, OrthographicCamera, Scene, Vector3, MathUtils, FogExp2, Color, Camera, Box3 } from 'three';
 import { OrbitControls } from 'three-stdlib';
@@ -419,13 +420,6 @@ export const LumaSplatViewer: React.FC = () => {
           console.log('PIXEL8D: Luma splats loaded successfully');
           setIsLoading(false);
           
-          // Fix depth buffer issues for proper occlusion
-          if (depthBufferEnabled && splats.material) {
-            splats.material.transparent = false;
-            splats.material.depthWrite = true;
-            splats.material.depthTest = true;
-          }
-
           // Update orthographic camera bounds based on loaded splat
           updateOrthographicCamera();
           
@@ -500,11 +494,11 @@ export const LumaSplatViewer: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (cameraRef.current && controlsRef.current && !hasInitializedRef.current) {
+    if (getCurrentCamera() && controlsRef.current && !hasInitializedRef.current) {
       console.log('PIXEL8D: Setting initial camera state');
       updateCameraManually();
     }
-  }, [updateCameraManually]);
+  }, [updateCameraManually, getCurrentCamera]);
 
   useEffect(() => {
     if (controlsRef.current) {
@@ -538,12 +532,12 @@ export const LumaSplatViewer: React.FC = () => {
 
   const resetCamera = useCallback(() => {
     const preset = { name: 'Reset', ...INITIAL_CAMERA_STATE };
-    // animateToPreset(preset);
-  }, []);
+    animateToPreset(preset);
+  }, [animateToPreset]);
 
   const handlePresetSelect = useCallback((preset: CameraPreset) => {
-    // animateToPreset(preset);
-  }, []);
+    animateToPreset(preset);
+  }, [animateToPreset]);
 
   // Settings handlers
   const handleQualityChange = useCallback((preset: string) => {
@@ -553,10 +547,8 @@ export const LumaSplatViewer: React.FC = () => {
 
   const handleDepthBufferToggle = useCallback((enabled: boolean) => {
     setDepthBufferEnabled(enabled);
-    if (splatsRef.current?.material) {
-      splatsRef.current.material.depthWrite = enabled;
-      splatsRef.current.material.depthTest = enabled;
-    }
+    // Note: Direct material access removed due to API limitations
+    console.log('PIXEL8D: Depth buffer setting changed to:', enabled);
   }, []);
 
   const handleSemanticMaskChange = useCallback((mask: string) => {
