@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
@@ -47,12 +48,43 @@ export const LumaSplatViewer: React.FC = () => {
   const isManualUpdateRef = useRef(false);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
+  const [aspectRatio, setAspectRatio] = useState(16/9); // Default aspect ratio
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [smoothness, setSmoothness] = useState(0.1);
 
   const constrainValue = useCallback((value: number, min: number, max: number) => {
     return MathUtils.clamp(value, min, max);
+  }, []);
+
+  // Helper function to calculate FOV from focal length with proper aspect ratio
+  const calculateFOVFromFocalLength = useCallback((focalLength: number, currentAspectRatio: number) => {
+    // Use the sensor height (24mm for full frame) adjusted for aspect ratio
+    const sensorHeight = 24;
+    const fov = 2 * Math.atan(sensorHeight / (2 * focalLength)) * (180 / Math.PI);
+    return Math.max(10, Math.min(120, fov)); // Clamp FOV to reasonable bounds
+  }, []);
+
+  // Helper function to calculate focal length from FOV with proper aspect ratio
+  const calculateFocalLengthFromFOV = useCallback((fov: number, currentAspectRatio: number) => {
+    const sensorHeight = 24;
+    return sensorHeight / (2 * Math.tan(MathUtils.degToRad(fov / 2)));
+  }, []);
+
+  // Get container dimensions and calculate aspect ratio
+  const getContainerDimensions = useCallback(() => {
+    const container = canvasRef.current?.parentElement;
+    if (container) {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const newAspectRatio = width / height;
+      
+      // Ensure aspect ratio is valid
+      if (isFinite(newAspectRatio) && newAspectRatio > 0) {
+        return { width, height, aspectRatio: newAspectRatio };
+      }
+    }
+    return { width: 1920, height: 1080, aspectRatio: 16/9 }; // Fallback
   }, []);
 
   const updateCameraFromControls = useCallback(() => {
@@ -68,15 +100,15 @@ export const LumaSplatViewer: React.FC = () => {
       yaw: MathUtils.radToDeg(camera.rotation.y)
     };
 
-    // Calculate focal length from current FOV
-    const focalLength = 36 / (2 * Math.tan(MathUtils.degToRad(camera.fov / 2)));
+    // Calculate focal length from current FOV using proper aspect ratio
+    const focalLength = calculateFocalLengthFromFOV(camera.fov, aspectRatio);
 
     setCameraState({
       position: { x: position.x, y: position.y, z: position.z },
       rotation,
       focalLength
     });
-  }, []);
+  }, [aspectRatio, calculateFocalLengthFromFOV]);
 
   const updateCameraManually = useCallback(() => {
     if (!cameraRef.current || !controlsRef.current) return;
@@ -97,9 +129,12 @@ export const LumaSplatViewer: React.FC = () => {
       MathUtils.degToRad(rotation.roll)
     );
 
-    // Update camera focal length (affects FOV)
-    const fov = (2 * Math.atan(36 / (2 * focalLength))) * (180 / Math.PI);
+    // Update camera focal length with proper aspect ratio handling
+    const fov = calculateFOVFromFocalLength(focalLength, aspectRatio);
     camera.fov = fov;
+    
+    // Ensure aspect ratio is properly set
+    camera.aspect = aspectRatio;
     camera.updateProjectionMatrix();
 
     // Update OrbitControls to match the new camera state
@@ -112,7 +147,7 @@ export const LumaSplatViewer: React.FC = () => {
     setTimeout(() => {
       isManualUpdateRef.current = false;
     }, 100);
-  }, [cameraState]);
+  }, [cameraState, aspectRatio, calculateFOVFromFocalLength]);
 
   const animateToPreset = useCallback((preset: CameraPreset) => {
     if (!cameraRef.current) return;
@@ -166,6 +201,10 @@ export const LumaSplatViewer: React.FC = () => {
       try {
         console.log('PIXEL8D: Initializing viewer...');
         
+        // Get initial container dimensions and aspect ratio
+        const { width, height, aspectRatio: initialAspectRatio } = getContainerDimensions();
+        setAspectRatio(initialAspectRatio);
+        
         // Dynamically import the Luma library
         const { LumaSplatsThree } = await import('@lumaai/luma-web');
 
@@ -178,15 +217,14 @@ export const LumaSplatViewer: React.FC = () => {
         });
         
         const updateSize = () => {
-          const container = canvasRef.current?.parentElement;
-          if (container) {
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-            renderer.setSize(width, height);
-            if (cameraRef.current) {
-              cameraRef.current.aspect = width / height;
-              cameraRef.current.updateProjectionMatrix();
-            }
+          const { width, height, aspectRatio: newAspectRatio } = getContainerDimensions();
+          
+          renderer.setSize(width, height);
+          setAspectRatio(newAspectRatio);
+          
+          if (cameraRef.current) {
+            cameraRef.current.aspect = newAspectRatio;
+            cameraRef.current.updateProjectionMatrix();
           }
         };
         
@@ -198,7 +236,8 @@ export const LumaSplatViewer: React.FC = () => {
         // Add atmospheric fog for enhanced visuals
         scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
         
-        const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
+        // Create camera with proper initial aspect ratio
+        const camera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
 
         // Initialize OrbitControls with proper bounds
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -266,7 +305,7 @@ export const LumaSplatViewer: React.FC = () => {
         };
         animate();
 
-        // Handle resize
+        // Handle resize with proper aspect ratio updates
         const handleResize = () => updateSize();
         window.addEventListener('resize', handleResize);
 
@@ -294,7 +333,7 @@ export const LumaSplatViewer: React.FC = () => {
         rendererRef.current.dispose();
       }
     };
-  }, [updateCameraFromControls]);
+  }, [updateCameraFromControls, getContainerDimensions]);
 
   useEffect(() => {
     updateCameraManually();
