@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
@@ -19,9 +18,9 @@ interface CameraPreset {
 }
 
 const INITIAL_CAMERA_STATE: CameraState = {
-  position: { x: 0, y: 0, z: 2 },
-  rotation: { roll: 0, pitch: 0, yaw: 0 },
-  focalLength: 30.56
+  position: { x: -2.83, y: -0.00, z: -1.95 },
+  rotation: { roll: 179.95, pitch: 179.94, yaw: -55.44 },
+  focalLength: 20.60
 };
 
 const CAMERA_PRESETS: CameraPreset[] = [
