@@ -60,7 +60,7 @@ export const LumaSplatViewer: React.FC = () => {
   const animationIdRef = useRef<number>();
   const isManualUpdateRef = useRef(false);
   const hasInitializedRef = useRef(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
+  const isSliderActiveRef = useRef(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -110,12 +110,21 @@ export const LumaSplatViewer: React.FC = () => {
   }, [isOrthographic]);
 
   const updateOrthographicCamera = useCallback(() => {
-    if (!orthographicCameraRef.current || !splatsRef.current) return;
+    if (!orthographicCameraRef.current) return;
 
     const camera = orthographicCameraRef.current;
-    const bbox = new Box3().setFromObject(splatsRef.current);
-    const size = bbox.getSize(new Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z) || 5; // Fallback to 5 if no size
+    let maxDim = 5; // Default fallback
+
+    // Calculate bounds from splats if available
+    if (splatsRef.current) {
+      try {
+        const bbox = new Box3().setFromObject(splatsRef.current);
+        const size = bbox.getSize(new Vector3());
+        maxDim = Math.max(size.x, size.y, size.z) || 5;
+      } catch (error) {
+        console.warn('PIXEL8D: Could not calculate splat bounds, using fallback');
+      }
+    }
     
     const zoom = cameraState.orthographicZoom;
     const frustumSize = maxDim * 2 / zoom;
@@ -130,6 +139,8 @@ export const LumaSplatViewer: React.FC = () => {
   const switchCameraMode = useCallback(() => {
     const currentCamera = getCurrentCamera();
     if (!currentCamera || !controlsRef.current) return;
+
+    console.log('PIXEL8D: Switching camera mode from', isOrthographic ? 'orthographic' : 'perspective');
 
     // Store current camera state
     const currentPos = currentCamera.position.clone();
@@ -152,9 +163,12 @@ export const LumaSplatViewer: React.FC = () => {
           newCamera.updateProjectionMatrix();
         }
 
-        // Update controls to use new camera
+        // Update controls to use new camera - THIS IS THE KEY FIX
         controlsRef.current!.object = newCamera;
+        controlsRef.current!.target.set(0, 0, 0);
         controlsRef.current!.update();
+        
+        console.log('PIXEL8D: Camera mode switched to', newMode ? 'orthographic' : 'perspective');
       }
       
       return newMode;
@@ -272,7 +286,8 @@ export const LumaSplatViewer: React.FC = () => {
   }, []);
 
   const updateCameraFromControls = useCallback(() => {
-    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current || isManualUpdateRef.current || !hasInitializedRef.current) return;
+    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current || 
+        isManualUpdateRef.current || !hasInitializedRef.current || isSliderActiveRef.current) return;
 
     const camera = getCurrentCamera();
     if (!camera) return;
@@ -340,7 +355,7 @@ export const LumaSplatViewer: React.FC = () => {
     // Allow OrbitControls to take over again after a brief delay
     setTimeout(() => {
       isManualUpdateRef.current = false;
-    }, 100);
+    }, 50);
   }, [cameraState, aspectRatio, calculateFOVFromFocalLength, isOrthographic, updateOrthographicCamera, getCurrentCamera]);
 
   const animateToPreset = useCallback((preset: CameraPreset) => {
@@ -568,10 +583,7 @@ export const LumaSplatViewer: React.FC = () => {
   }, [smoothness]);
 
   const handleCameraChange = useCallback((updates: Partial<CameraState>) => {
-    // Clear any existing debounce timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+    isSliderActiveRef.current = true;
 
     setCameraState(prev => {
       const newState = { ...prev, ...updates };
@@ -599,10 +611,14 @@ export const LumaSplatViewer: React.FC = () => {
       return newState;
     });
 
-    // Debounce the camera update to reduce jumpiness
-    debounceTimerRef.current = setTimeout(() => {
+    // Apply changes immediately, no debouncing
+    setTimeout(() => {
       updateCameraManually();
-    }, 50);
+      // Reset slider active flag after a short delay
+      setTimeout(() => {
+        isSliderActiveRef.current = false;
+      }, 100);
+    }, 0);
   }, [constrainValue, updateCameraManually]);
 
   const resetCamera = useCallback(() => {
@@ -622,13 +638,11 @@ export const LumaSplatViewer: React.FC = () => {
 
   const handleDepthBufferToggle = useCallback((enabled: boolean) => {
     setDepthBufferEnabled(enabled);
-    // Note: Direct material access removed due to API limitations
     console.log('PIXEL8D: Depth buffer setting changed to:', enabled);
   }, []);
 
   const handleSemanticMaskChange = useCallback((mask: string) => {
     setSemanticMask(mask);
-    // TODO: Implement semantic mask filtering
     console.log('PIXEL8D: Semantic mask changed to:', mask);
   }, []);
 
@@ -691,7 +705,7 @@ export const LumaSplatViewer: React.FC = () => {
         {showSettings ? (
           <SettingsPanel
             isOrthographic={isOrthographic}
-            onCameraModeChange={setIsOrthographic}
+            onCameraModeChange={switchCameraMode}
             qualityPreset={qualityPreset}
             onQualityChange={handleQualityChange}
             showGrid={showGrid}
