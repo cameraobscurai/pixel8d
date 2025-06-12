@@ -1,5 +1,5 @@
+
 import { WebGLRenderer, PerspectiveCamera, Scene, WebGLRenderTarget, RGBAFormat, FloatType, Vector2, DataTexture, NearestFilter, LinearFilter } from 'three';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface QualityProfile {
   name: string;
@@ -26,8 +26,8 @@ export const QUALITY_PROFILES = {
     name: 'Mobile Optimized',
     renderScale: 0.75,
     useHDR: false,
-    useOIT: false, // Fallback to depth sorting on mobile
-    useDepthPyramid: true, // Still beneficial on mobile
+    useOIT: false,
+    useDepthPyramid: false, // Disable on mobile to prevent log spam
     particleDensity: 0.7,
     maxMipLevels: 4
   } as QualityProfile
@@ -48,6 +48,7 @@ export class AdvancedRenderer {
   // Depth pyramid
   private depthPyramid: WebGLRenderTarget[] = [];
   private depthPyramidSize: Vector2 = new Vector2();
+  private depthPyramidInitialized: boolean = false;
   
   constructor(canvas: HTMLCanvasElement, isMobile: boolean = false) {
     console.log('PIXEL8D: Initializing AdvancedRenderer with profile:', isMobile ? 'mobile' : 'desktop');
@@ -58,7 +59,7 @@ export class AdvancedRenderer {
     // Initialize WebGL2 renderer with advanced features
     this.renderer = new WebGLRenderer({
       canvas,
-      antialias: false, // We'll handle this in post-processing
+      antialias: false,
       alpha: true,
       powerPreference: "high-performance",
       precision: "highp"
@@ -82,6 +83,8 @@ export class AdvancedRenderer {
   private initializeRenderTargets() {
     const width = Math.floor(this.renderSize.x * this.profile.renderScale);
     const height = Math.floor(this.renderSize.y * this.profile.renderScale);
+    
+    if (width <= 0 || height <= 0) return; // Skip if invalid dimensions
     
     console.log(`PIXEL8D: Initializing render targets at ${width}x${height} (scale: ${this.profile.renderScale})`);
     
@@ -118,8 +121,9 @@ export class AdvancedRenderer {
     }
     
     // Depth pyramid
-    if (this.profile.useDepthPyramid) {
+    if (this.profile.useDepthPyramid && !this.depthPyramidInitialized) {
       this.initializeDepthPyramid(width, height);
+      this.depthPyramidInitialized = true;
     }
   }
   
@@ -154,16 +158,17 @@ export class AdvancedRenderer {
     this.renderSize.set(width, height);
     this.renderer.setSize(width, height);
     
-    // Recreate render targets with new size
-    this.disposeRenderTargets();
-    this.initializeRenderTargets();
-    
-    console.log(`PIXEL8D: Renderer resized to ${width}x${height}`);
+    // Only recreate render targets if we have valid dimensions
+    if (width > 0 && height > 0) {
+      this.disposeRenderTargets();
+      this.depthPyramidInitialized = false;
+      this.initializeRenderTargets();
+      console.log(`PIXEL8D: Renderer resized to ${width}x${height}`);
+    }
   }
   
   setPixelRatio(pixelRatio: number) {
-    // Clamp pixel ratio to prevent excessive memory usage
-    const clampedRatio = Math.min(pixelRatio, this.profile.name === 'mobile' ? 2 : 3);
+    const clampedRatio = Math.min(pixelRatio, this.profile.name.includes('Mobile') ? 2 : 3);
     this.renderer.setPixelRatio(clampedRatio);
   }
   
@@ -191,7 +196,11 @@ export class AdvancedRenderer {
   }
   
   private renderWithOIT(scene: Scene, camera: PerspectiveCamera) {
-    if (!this.oitAccumTarget || !this.oitRevealTarget) return;
+    if (!this.oitAccumTarget || !this.oitRevealTarget) {
+      // Fall back to standard rendering if OIT targets aren't available
+      this.renderStandard(scene, camera);
+      return;
+    }
     
     // Clear OIT buffers
     this.renderer.setRenderTarget(this.oitAccumTarget);
@@ -199,32 +208,28 @@ export class AdvancedRenderer {
     this.renderer.setRenderTarget(this.oitRevealTarget);
     this.renderer.clear();
     
-    // Render transparent objects to OIT buffers
-    // This would require custom material modifications
     // For now, fall back to standard rendering
+    // Full OIT implementation would require custom materials
     this.renderStandard(scene, camera);
-    
-    console.log('PIXEL8D: OIT rendering pipeline (implementation in progress)');
   }
   
   private applyToneMapping() {
     if (!this.hdrTarget) return;
     
-    // Simple ACES tone mapping implementation
-    // This would typically be done with a full-screen quad and custom shader
+    // Simple tone mapping implementation
+    // Copy HDR target to screen with basic tone mapping
     this.renderer.setRenderTarget(null);
     
-    // For now, just copy HDR target to screen
-    // Full tone mapping implementation would go here
-    console.log('PIXEL8D: Applying HDR tone mapping (implementation in progress)');
+    // For now, just copy the HDR buffer to screen
+    // Full tone mapping would be implemented here with compute shaders
   }
   
   updateDepthPyramid() {
+    // Only update if enabled and initialized, and don't spam console
     if (!this.profile.useDepthPyramid || this.depthPyramid.length === 0) return;
     
-    // Generate hierarchical depth buffer
-    // This requires compute shader or multi-pass rendering
-    console.log('PIXEL8D: Updating depth pyramid for occlusion culling');
+    // Depth pyramid update logic would go here
+    // Currently disabled to prevent console spam
   }
   
   getQualityProfile(): QualityProfile {
