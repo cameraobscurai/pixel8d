@@ -1,4 +1,3 @@
-
 import React from 'react';
 import LiquidGlass from 'liquid-glass-react';
 import { Card } from '@/components/ui/card';
@@ -35,7 +34,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     <LiquidGlass
       displacementScale={25}
       aberrationIntensity={0.4}
-      animationSpeed={0.6}
       className="w-80"
     >
       <div className="w-80 glass-panel border-l border-white/20 dark:border-black/20 backdrop-blur-xl bg-white/30 dark:bg-black/20">

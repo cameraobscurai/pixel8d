@@ -1,4 +1,3 @@
-
 import React from 'react';
 import LiquidGlass from 'liquid-glass-react';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,6 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
     <LiquidGlass
       displacementScale={15}
       aberrationIntensity={0.3}
-      animationSpeed={0.8}
       className="w-full"
     >
       <div className="glass-toolbar border-b border-white/20 dark:border-black/20 p-6 relative z-10 backdrop-blur-xl bg-white/40 dark:bg-black/30">

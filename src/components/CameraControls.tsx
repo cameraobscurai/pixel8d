@@ -1,4 +1,3 @@
-
 import React from 'react';
 import LiquidGlass from 'liquid-glass-react';
 import { Card } from '@/components/ui/card';
@@ -59,7 +58,6 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
     <LiquidGlass
       displacementScale={20}
       aberrationIntensity={0.35}
-      animationSpeed={0.5}
       className="w-80"
     >
       <Card className="w-80 p-6 glass-panel border-r border-white/20 dark:border-black/20 backdrop-blur-xl bg-white/30 dark:bg-black/20">
