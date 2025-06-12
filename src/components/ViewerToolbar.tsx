@@ -1,8 +1,6 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Settings, Download, Share, Camera } from 'lucide-react';
-import { Vr } from 'lucide-react';
+import { RotateCcw, Settings, Download, Share, Camera, Headphones } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +59,7 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
               disabled={isLoading}
               className="gap-2"
             >
-              <Vr size={16} />
+              <Headphones size={16} />
               {isVRActive ? 'Exit VR' : 'Enter VR'}
             </Button>
           )}

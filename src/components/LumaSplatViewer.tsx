@@ -253,7 +253,15 @@ export const LumaSplatViewer: React.FC = () => {
           powerPreference: "high-performance"
         });
         
-        // Initialize WebXR Manager
+        const scene = new Scene();
+        
+        // Add atmospheric fog for enhanced visuals
+        scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
+        
+        // Create camera with proper initial aspect ratio and initial state
+        const camera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
+        
+        // Initialize WebXR Manager AFTER scene and camera are created
         const webXRManager = new WebXRManager(
           renderer,
           camera,
@@ -283,14 +291,6 @@ export const LumaSplatViewer: React.FC = () => {
         
         updateSize();
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        const scene = new Scene();
-        
-        // Add atmospheric fog for enhanced visuals
-        scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
-        
-        // Create camera with proper initial aspect ratio and initial state
-        const camera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
         
         // Set initial camera position and rotation
         camera.position.set(INITIAL_CAMERA_STATE.position.x, INITIAL_CAMERA_STATE.position.y, INITIAL_CAMERA_STATE.position.z);
