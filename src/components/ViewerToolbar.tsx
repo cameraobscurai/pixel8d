@@ -1,0 +1,73 @@
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { RotateCcw, Settings, Download, Share } from 'lucide-react';
+
+interface ViewerToolbarProps {
+  onReset: () => void;
+  isLoading: boolean;
+}
+
+export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
+  onReset,
+  isLoading
+}) => {
+  return (
+    <div className="border-b border-border bg-background p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold">Luma Splat Viewer</h1>
+          {isLoading && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-sm">Loading...</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onReset}
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <RotateCcw size={16} />
+            Reset Camera
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <Settings size={16} />
+            Settings
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <Download size={16} />
+            Export
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <Share size={16} />
+            Share
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
