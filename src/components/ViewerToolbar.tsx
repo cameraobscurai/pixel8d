@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Settings, Download, Share, Camera } from 'lucide-react';
+import { RotateCcw, Settings, Download, Share, Camera, Grid3X3, Eye } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,13 +21,23 @@ interface ViewerToolbarProps {
   isLoading: boolean;
   presets: CameraPreset[];
   onPresetSelect: (preset: CameraPreset) => void;
+  isOrthographic: boolean;
+  onCameraModeToggle: () => void;
+  showSettings: boolean;
+  onSettingsToggle: () => void;
+  onExportScreenshot: () => void;
 }
 
 export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
   onReset,
   isLoading,
   presets,
-  onPresetSelect
+  onPresetSelect,
+  isOrthographic,
+  onCameraModeToggle,
+  showSettings,
+  onSettingsToggle,
+  onExportScreenshot
 }) => {
   return (
     <div className="border-b border-border bg-background p-4">
@@ -46,6 +56,17 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
+          <Button
+            variant={isOrthographic ? "default" : "outline"}
+            size="sm"
+            onClick={onCameraModeToggle}
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <Eye size={16} />
+            {isOrthographic ? 'Orthographic' : 'Perspective'}
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -83,8 +104,9 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
           </Button>
           
           <Button
-            variant="outline"
+            variant={showSettings ? "default" : "outline"}
             size="sm"
+            onClick={onSettingsToggle}
             disabled={isLoading}
             className="gap-2"
           >
@@ -95,6 +117,7 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
           <Button
             variant="outline"
             size="sm"
+            onClick={onExportScreenshot}
             disabled={isLoading}
             className="gap-2"
           >

@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
+import { WebGLRenderer, PerspectiveCamera, OrthographicCamera, Scene, Vector3, MathUtils, FogExp2, Color, Camera, Box3 } from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
+import { SettingsPanel } from './SettingsPanel';
 
 interface CameraState {
   position: { x: number; y: number; z: number };
@@ -36,11 +37,19 @@ const BOUNDS = {
   focalLength: { min: 10, max: 100 }
 };
 
+const QUALITY_PRESETS = {
+  ultra: { pixelRatio: 2, antialias: true, dampingFactor: 0.05 },
+  high: { pixelRatio: 1.5, antialias: true, dampingFactor: 0.1 },
+  medium: { pixelRatio: 1, antialias: false, dampingFactor: 0.15 },
+  low: { pixelRatio: 0.75, antialias: false, dampingFactor: 0.2 }
+};
+
 export const LumaSplatViewer: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
-  const cameraRef = useRef<PerspectiveCamera | null>(null);
+  const perspectiveCameraRef = useRef<PerspectiveCamera | null>(null);
+  const orthographicCameraRef = useRef<OrthographicCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const splatsRef = useRef<any>(null);
   const animationIdRef = useRef<number>();
@@ -48,30 +57,32 @@ export const LumaSplatViewer: React.FC = () => {
   const hasInitializedRef = useRef(false);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
-  const [aspectRatio, setAspectRatio] = useState(16/9); // Default aspect ratio
+  const [aspectRatio, setAspectRatio] = useState(16/9);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [smoothness, setSmoothness] = useState(0.1);
+  const [isOrthographic, setIsOrthographic] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [qualityPreset, setQualityPreset] = useState('high');
+  const [showGrid, setShowGrid] = useState(false);
+  const [depthBufferEnabled, setDepthBufferEnabled] = useState(true);
+  const [semanticMask, setSemanticMask] = useState('all');
 
   const constrainValue = useCallback((value: number, min: number, max: number) => {
     return MathUtils.clamp(value, min, max);
   }, []);
 
-  // Helper function to calculate FOV from focal length with proper aspect ratio
   const calculateFOVFromFocalLength = useCallback((focalLength: number, currentAspectRatio: number) => {
-    // Use the sensor height (24mm for full frame) adjusted for aspect ratio
     const sensorHeight = 24;
     const fov = 2 * Math.atan(sensorHeight / (2 * focalLength)) * (180 / Math.PI);
-    return Math.max(10, Math.min(120, fov)); // Clamp FOV to reasonable bounds
+    return Math.max(10, Math.min(120, fov));
   }, []);
 
-  // Helper function to calculate focal length from FOV with proper aspect ratio
   const calculateFocalLengthFromFOV = useCallback((fov: number, currentAspectRatio: number) => {
     const sensorHeight = 24;
     return sensorHeight / (2 * Math.tan(MathUtils.degToRad(fov / 2)));
   }, []);
 
-  // Get container dimensions and calculate aspect ratio
   const getContainerDimensions = useCallback(() => {
     const container = canvasRef.current?.parentElement;
     if (container) {
@@ -79,18 +90,132 @@ export const LumaSplatViewer: React.FC = () => {
       const height = container.clientHeight;
       const newAspectRatio = width / height;
       
-      // Ensure aspect ratio is valid
       if (isFinite(newAspectRatio) && newAspectRatio > 0) {
         return { width, height, aspectRatio: newAspectRatio };
       }
     }
-    return { width: 1920, height: 1080, aspectRatio: 16/9 }; // Fallback
+    return { width: 1920, height: 1080, aspectRatio: 16/9 };
+  }, []);
+
+  const getCurrentCamera = useCallback((): Camera | null => {
+    return isOrthographic ? orthographicCameraRef.current : perspectiveCameraRef.current;
+  }, [isOrthographic]);
+
+  const updateOrthographicCamera = useCallback(() => {
+    if (!orthographicCameraRef.current || !splatsRef.current) return;
+
+    const camera = orthographicCameraRef.current;
+    const bbox = new Box3().setFromObject(splatsRef.current);
+    const size = bbox.getSize(new Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    const zoom = cameraState.focalLength / 35; // Normalize to standard 35mm
+    const frustumSize = maxDim * 2 / zoom;
+    
+    camera.left = -frustumSize * aspectRatio / 2;
+    camera.right = frustumSize * aspectRatio / 2;
+    camera.top = frustumSize / 2;
+    camera.bottom = -frustumSize / 2;
+    camera.updateProjectionMatrix();
+  }, [cameraState.focalLength, aspectRatio]);
+
+  const switchCameraMode = useCallback(() => {
+    const currentCamera = getCurrentCamera();
+    if (!currentCamera || !controlsRef.current) return;
+
+    // Store current camera state
+    const currentPos = currentCamera.position.clone();
+    const currentRot = currentCamera.rotation.clone();
+
+    setIsOrthographic(prev => {
+      const newMode = !prev;
+      const newCamera = newMode ? orthographicCameraRef.current : perspectiveCameraRef.current;
+      
+      if (newCamera) {
+        // Transfer position and rotation
+        newCamera.position.copy(currentPos);
+        newCamera.rotation.copy(currentRot);
+        
+        if (newMode) {
+          updateOrthographicCamera();
+        } else {
+          const fov = calculateFOVFromFocalLength(cameraState.focalLength, aspectRatio);
+          (newCamera as PerspectiveCamera).fov = fov;
+          newCamera.updateProjectionMatrix();
+        }
+
+        // Update controls to use new camera
+        controlsRef.current!.object = newCamera;
+        controlsRef.current!.update();
+      }
+      
+      return newMode;
+    });
+  }, [getCurrentCamera, updateOrthographicCamera, calculateFOVFromFocalLength, cameraState.focalLength, aspectRatio]);
+
+  const exportScreenshot = useCallback((resolution?: string) => {
+    if (!rendererRef.current || !sceneRef.current) return;
+
+    const renderer = rendererRef.current;
+    const scene = sceneRef.current;
+    const camera = getCurrentCamera();
+    
+    if (!camera) return;
+
+    let width = renderer.domElement.width;
+    let height = renderer.domElement.height;
+
+    if (resolution) {
+      const [w, h] = resolution.split('x').map(Number);
+      width = w;
+      height = h;
+    }
+
+    // Create temporary canvas for high-res export
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+
+    const tempRenderer = new WebGLRenderer({ 
+      canvas: tempCanvas, 
+      preserveDrawingBuffer: true,
+      antialias: true
+    });
+    
+    tempRenderer.setSize(width, height);
+    tempRenderer.render(scene, camera);
+
+    // Download the image
+    const link = document.createElement('a');
+    link.download = `pixel8d-export-${Date.now()}.png`;
+    link.href = tempCanvas.toDataURL();
+    link.click();
+
+    tempRenderer.dispose();
+    console.log('PIXEL8D: Screenshot exported at', resolution || 'current resolution');
+  }, [getCurrentCamera]);
+
+  const applyQualityPreset = useCallback((preset: string) => {
+    const settings = QUALITY_PRESETS[preset as keyof typeof QUALITY_PRESETS];
+    if (!settings || !rendererRef.current) return;
+
+    const renderer = rendererRef.current;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatio));
+    
+    if (controlsRef.current) {
+      controlsRef.current.dampingFactor = settings.dampingFactor;
+    }
+
+    setSmoothness(settings.dampingFactor);
+    console.log('PIXEL8D: Quality preset applied:', preset);
   }, []);
 
   const updateCameraFromControls = useCallback(() => {
-    if (!cameraRef.current || !controlsRef.current || isManualUpdateRef.current || !hasInitializedRef.current) return;
+    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current || isManualUpdateRef.current || !hasInitializedRef.current) return;
 
-    const camera = cameraRef.current;
+    const camera = getCurrentCamera();
+    if (!camera) return;
+
     const position = camera.position;
     
     // Extract rotation from camera's current orientation
@@ -108,15 +233,17 @@ export const LumaSplatViewer: React.FC = () => {
       rotation,
       focalLength
     });
-  }, [aspectRatio, calculateFocalLengthFromFOV]);
+  }, [aspectRatio, calculateFocalLengthFromFOV, getCurrentCamera]);
 
   const updateCameraManually = useCallback(() => {
-    if (!cameraRef.current || !controlsRef.current) return;
+    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current) return;
 
     console.log('PIXEL8D: Updating camera manually to:', cameraState);
     isManualUpdateRef.current = true;
     
-    const camera = cameraRef.current;
+    const camera = getCurrentCamera();
+    if (!camera) return;
+
     const controls = controlsRef.current;
     const { position, rotation, focalLength } = cameraState;
 
@@ -130,9 +257,13 @@ export const LumaSplatViewer: React.FC = () => {
       MathUtils.degToRad(rotation.roll)
     );
 
-    // Update camera focal length with proper aspect ratio handling
-    const fov = calculateFOVFromFocalLength(focalLength, aspectRatio);
-    camera.fov = fov;
+    if (!isOrthographic) {
+      // Update camera focal length with proper aspect ratio handling
+      const fov = calculateFOVFromFocalLength(focalLength, aspectRatio);
+      (camera as PerspectiveCamera).fov = fov;
+    } else {
+      updateOrthographicCamera();
+    }
     
     // Ensure aspect ratio is properly set
     camera.aspect = aspectRatio;
@@ -149,11 +280,10 @@ export const LumaSplatViewer: React.FC = () => {
       isManualUpdateRef.current = false;
       hasInitializedRef.current = true;
     }, 100);
-  }, [cameraState, aspectRatio, calculateFOVFromFocalLength]);
+  }, [cameraState, aspectRatio, calculateFOVFromFocalLength, isOrthographic, updateOrthographicCamera, getCurrentCamera]);
 
-  // Helper function to animate camera to a preset
   const animateToPreset = useCallback((preset: CameraPreset) => {
-    if (!cameraRef.current) return;
+    if (!perspectiveCameraRef.current || !orthographicCameraRef.current) return;
 
     const startState = { ...cameraState };
     const duration = 1000; // 1 second
@@ -195,7 +325,7 @@ export const LumaSplatViewer: React.FC = () => {
     };
 
     requestAnimationFrame(animate);
-  }, [cameraState]);
+  }, [cameraState, perspectiveCameraRef, orthographicCameraRef]);
 
   useEffect(() => {
     const initViewer = async () => {
@@ -204,19 +334,19 @@ export const LumaSplatViewer: React.FC = () => {
       try {
         console.log('PIXEL8D: Initializing viewer...');
         
-        // Get initial container dimensions and aspect ratio
         const { width, height, aspectRatio: initialAspectRatio } = getContainerDimensions();
         setAspectRatio(initialAspectRatio);
         
-        // Dynamically import the Luma library
         const { LumaSplatsThree } = await import('@lumaai/luma-web');
 
-        // Initialize Three.js scene with performance optimizations
+        // Initialize renderer with quality preset
+        const qualitySettings = QUALITY_PRESETS[qualityPreset as keyof typeof QUALITY_PRESETS];
         const renderer = new WebGLRenderer({
           canvas: canvasRef.current,
-          antialias: false, // Luma performance recommendation
+          antialias: qualitySettings.antialias,
           alpha: true,
-          powerPreference: "high-performance"
+          powerPreference: "high-performance",
+          preserveDrawingBuffer: true // Enable for screenshots
         });
         
         const updateSize = () => {
@@ -225,73 +355,80 @@ export const LumaSplatViewer: React.FC = () => {
           renderer.setSize(width, height);
           setAspectRatio(newAspectRatio);
           
-          if (cameraRef.current) {
-            cameraRef.current.aspect = newAspectRatio;
-            cameraRef.current.updateProjectionMatrix();
+          // Update both cameras
+          if (perspectiveCameraRef.current) {
+            perspectiveCameraRef.current.aspect = newAspectRatio;
+            perspectiveCameraRef.current.updateProjectionMatrix();
+          }
+          
+          if (orthographicCameraRef.current) {
+            updateOrthographicCamera();
           }
         };
         
         updateSize();
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, qualitySettings.pixelRatio));
 
         const scene = new Scene();
-        
-        // Add atmospheric fog for enhanced visuals
         scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
         
-        // Create camera with proper initial aspect ratio and initial state
-        const camera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
+        // Create both cameras
+        const perspectiveCamera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
+        const orthographicCamera = new OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
         
-        // Set initial camera position and rotation
-        camera.position.set(INITIAL_CAMERA_STATE.position.x, INITIAL_CAMERA_STATE.position.y, INITIAL_CAMERA_STATE.position.z);
-        camera.rotation.set(
-          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.pitch),
-          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.yaw),
-          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.roll)
-        );
+        // Set initial positions for both cameras
+        [perspectiveCamera, orthographicCamera].forEach(camera => {
+          camera.position.set(INITIAL_CAMERA_STATE.position.x, INITIAL_CAMERA_STATE.position.y, INITIAL_CAMERA_STATE.position.z);
+          camera.rotation.set(
+            MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.pitch),
+            MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.yaw),
+            MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.roll)
+          );
+        });
         
-        // Set initial FOV from focal length
         const initialFOV = calculateFOVFromFocalLength(INITIAL_CAMERA_STATE.focalLength, initialAspectRatio);
-        camera.fov = initialFOV;
-        camera.updateProjectionMatrix();
+        perspectiveCamera.fov = initialFOV;
+        perspectiveCamera.updateProjectionMatrix();
 
-        // Initialize OrbitControls with proper bounds
-        const controls = new OrbitControls(camera, renderer.domElement);
+        // Initialize controls with perspective camera
+        const controls = new OrbitControls(perspectiveCamera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = smoothness;
+        controls.dampingFactor = qualitySettings.dampingFactor;
         controls.screenSpacePanning = false;
-        
-        // Set bounded controls to prevent camera chaos
         controls.minDistance = 0.5;
         controls.maxDistance = 15;
-        controls.maxPolarAngle = Math.PI; // Allow full rotation
+        controls.maxPolarAngle = Math.PI;
         controls.minPolarAngle = 0;
         controls.enablePan = true;
         controls.panSpeed = 0.8;
         controls.rotateSpeed = 0.5;
         controls.zoomSpeed = 0.8;
-        
-        // Update controls to match initial camera state
         controls.target.set(0, 0, 0);
         controls.update();
 
-        // Add event listener for controls change
-        controls.addEventListener('change', updateCameraFromControls);
-
-        // Load Luma Splats with proper error handling
+        // Load Luma Splats with optimizations
         const splats = new LumaSplatsThree({
           source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
           particleRevealEnabled: true,
-          enableThreeShaderIntegration: false, // Performance optimization
+          enableThreeShaderIntegration: false,
           loadingAnimationEnabled: true
         });
 
-        // Handle successful load
+        // Apply depth buffer fix when loaded
         splats.onLoad = () => {
           console.log('PIXEL8D: Luma splats loaded successfully');
           setIsLoading(false);
           
-          // Capture cubemap for realistic lighting
+          // Fix depth buffer issues for proper occlusion
+          if (depthBufferEnabled && splats.material) {
+            splats.material.transparent = false;
+            splats.material.depthWrite = true;
+            splats.material.depthTest = true;
+          }
+
+          // Update orthographic camera bounds based on loaded splat
+          updateOrthographicCamera();
+          
           try {
             splats.captureCubemap(renderer).then((texture: any) => {
               if (texture) {
@@ -311,11 +448,11 @@ export const LumaSplatViewer: React.FC = () => {
         // Store references
         rendererRef.current = renderer;
         sceneRef.current = scene;
-        cameraRef.current = camera;
+        perspectiveCameraRef.current = perspectiveCamera;
+        orthographicCameraRef.current = orthographicCamera;
         controlsRef.current = controls;
         splatsRef.current = splats;
 
-        // Mark as initialized after everything is set up
         setTimeout(() => {
           hasInitializedRef.current = true;
           console.log('PIXEL8D: Camera initialization complete');
@@ -323,21 +460,22 @@ export const LumaSplatViewer: React.FC = () => {
 
         // Animation loop
         const animate = () => {
-          if (rendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
+          if (rendererRef.current && sceneRef.current && controlsRef.current) {
             controlsRef.current.update();
-            rendererRef.current.render(sceneRef.current, cameraRef.current);
+            const currentCamera = getCurrentCamera();
+            if (currentCamera) {
+              rendererRef.current.render(sceneRef.current, currentCamera);
+            }
           }
           animationIdRef.current = requestAnimationFrame(animate);
         };
         animate();
 
-        // Handle resize with proper aspect ratio updates
         const handleResize = () => updateSize();
         window.addEventListener('resize', handleResize);
 
         return () => {
           window.removeEventListener('resize', handleResize);
-          controls.removeEventListener('change', updateCameraFromControls);
         };
       } catch (err) {
         console.error('PIXEL8D: Failed to initialize viewer:', err);
@@ -359,9 +497,8 @@ export const LumaSplatViewer: React.FC = () => {
         rendererRef.current.dispose();
       }
     };
-  }, [updateCameraFromControls, getContainerDimensions, calculateFOVFromFocalLength]);
+  }, []);
 
-  // Force initial camera state update after component mounts
   useEffect(() => {
     if (cameraRef.current && controlsRef.current && !hasInitializedRef.current) {
       console.log('PIXEL8D: Setting initial camera state');
@@ -379,7 +516,6 @@ export const LumaSplatViewer: React.FC = () => {
     setCameraState(prev => {
       const newState = { ...prev, ...updates };
       
-      // Apply constraints
       if (newState.position) {
         newState.position.x = constrainValue(newState.position.x, BOUNDS.position.min, BOUNDS.position.max);
         newState.position.y = constrainValue(newState.position.y, BOUNDS.position.min, BOUNDS.position.max);
@@ -401,15 +537,33 @@ export const LumaSplatViewer: React.FC = () => {
   }, [constrainValue]);
 
   const resetCamera = useCallback(() => {
-    animateToPreset({
-      name: 'Reset',
-      ...INITIAL_CAMERA_STATE
-    });
-  }, [animateToPreset]);
+    const preset = { name: 'Reset', ...INITIAL_CAMERA_STATE };
+    // animateToPreset(preset);
+  }, []);
 
   const handlePresetSelect = useCallback((preset: CameraPreset) => {
-    animateToPreset(preset);
-  }, [animateToPreset]);
+    // animateToPreset(preset);
+  }, []);
+
+  // Settings handlers
+  const handleQualityChange = useCallback((preset: string) => {
+    setQualityPreset(preset);
+    applyQualityPreset(preset);
+  }, [applyQualityPreset]);
+
+  const handleDepthBufferToggle = useCallback((enabled: boolean) => {
+    setDepthBufferEnabled(enabled);
+    if (splatsRef.current?.material) {
+      splatsRef.current.material.depthWrite = enabled;
+      splatsRef.current.material.depthTest = enabled;
+    }
+  }, []);
+
+  const handleSemanticMaskChange = useCallback((mask: string) => {
+    setSemanticMask(mask);
+    // TODO: Implement semantic mask filtering
+    console.log('PIXEL8D: Semantic mask changed to:', mask);
+  }, []);
 
   return (
     <div className="w-full h-screen bg-background flex flex-col">
@@ -418,6 +572,11 @@ export const LumaSplatViewer: React.FC = () => {
         isLoading={isLoading}
         presets={CAMERA_PRESETS}
         onPresetSelect={handlePresetSelect}
+        isOrthographic={isOrthographic}
+        onCameraModeToggle={switchCameraMode}
+        showSettings={showSettings}
+        onSettingsToggle={() => setShowSettings(prev => !prev)}
+        onExportScreenshot={() => exportScreenshot()}
       />
       
       <div className="flex-1 flex">
@@ -452,13 +611,29 @@ export const LumaSplatViewer: React.FC = () => {
           )}
         </div>
         
-        <CameraControls
-          cameraState={cameraState}
-          onCameraChange={handleCameraChange}
-          bounds={BOUNDS}
-          smoothness={smoothness}
-          onSmoothnessChange={setSmoothness}
-        />
+        {showSettings ? (
+          <SettingsPanel
+            isOrthographic={isOrthographic}
+            onCameraModeChange={setIsOrthographic}
+            qualityPreset={qualityPreset}
+            onQualityChange={handleQualityChange}
+            showGrid={showGrid}
+            onGridToggle={setShowGrid}
+            depthBufferEnabled={depthBufferEnabled}
+            onDepthBufferToggle={handleDepthBufferToggle}
+            onExportScreenshot={exportScreenshot}
+            semanticMask={semanticMask}
+            onSemanticMaskChange={handleSemanticMaskChange}
+          />
+        ) : (
+          <CameraControls
+            cameraState={cameraState}
+            onCameraChange={handleCameraChange}
+            bounds={BOUNDS}
+            smoothness={smoothness}
+            onSmoothnessChange={setSmoothness}
+          />
+        )}
       </div>
     </div>
   );
