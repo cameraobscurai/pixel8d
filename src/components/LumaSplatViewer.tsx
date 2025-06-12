@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
@@ -242,6 +241,11 @@ export const LumaSplatViewer: React.FC = () => {
     camera.fov = fov;
     camera.aspect = aspectRatio;
     camera.updateProjectionMatrix();
+
+    // Ensure OrbitControls references the correct camera
+    if (controls.object !== camera) {
+      controls.object = camera;
+    }
 
     // Update OrbitControls to match the new camera state
     controls.object.position.copy(camera.position);
