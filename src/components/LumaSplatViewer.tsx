@@ -31,34 +31,18 @@ const CAMERA_PRESETS: CameraPreset[] = [
 ];
 
 export const LumaSplatViewer: React.FC = () => {
-  const viewerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [lumaViewer, setLumaViewer] = useState<any>(null);
+  const [captureUrl, setCaptureUrl] = useState<string>('');
 
   useEffect(() => {
     console.log('PIXEL8D: Initializing viewer...');
     
     const initViewer = async () => {
       try {
-        if (!viewerRef.current) return;
-
-        // Import Luma AI web viewer
-        const { LumaSplatsThree } = await import('@lumaai/luma-web');
-        
         // Create a default capture URL (you can replace this with any Luma AI capture)
-        const captureUrl = 'https://lumalabs.ai/embed/4da7d439-56b7-4bd0-8dd7-0c64a7e3b37c?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false';
+        const url = 'https://lumalabs.ai/embed/4da7d439-56b7-4bd0-8dd7-0c64a7e3b37c?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false';
         
-        // Create iframe element for the Luma viewer
-        const iframe = document.createElement('iframe');
-        iframe.src = captureUrl;
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.style.border = 'none';
-        iframe.title = 'Luma AI Gaussian Splat Viewer';
-        
-        // Clear the container and add the iframe
-        viewerRef.current.innerHTML = '';
-        viewerRef.current.appendChild(iframe);
+        setCaptureUrl(url);
         
         console.log('PIXEL8D: Luma splats loaded successfully');
         console.log('PIXEL8D: Camera initialization complete');
@@ -94,15 +78,18 @@ export const LumaSplatViewer: React.FC = () => {
       />
       
       <div className="flex-1 relative">
-        <div 
-          ref={viewerRef}
-          className="w-full h-full bg-gradient-to-br from-background to-muted flex items-center justify-center"
-        >
+        <div className="w-full h-full bg-gradient-to-br from-background to-muted flex items-center justify-center">
           {isLoading ? (
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-muted-foreground">Loading Gaussian Splats...</p>
             </div>
+          ) : captureUrl ? (
+            <iframe
+              src={captureUrl}
+              className="w-full h-full border-0"
+              title="Luma AI Gaussian Splat Viewer"
+            />
           ) : null}
         </div>
       </div>
