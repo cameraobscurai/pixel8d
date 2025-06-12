@@ -32,10 +32,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onSemanticMaskChange
 }) => {
   return (
-    <div className="fixed right-0 top-20 bottom-0 z-40 w-80 glass-panel border-l border-white/20 dark:border-black/20 overflow-y-auto">
+    <div className="fixed right-0 top-20 bottom-0 z-40 w-80 bg-white/85 dark:bg-black/85 backdrop-blur-xl border-l border-white/20 dark:border-black/20 overflow-y-auto">
       <div className="p-6 space-y-8">
-        <LiquidGlass displacementScale={18} aberrationIntensity={0.25}>
-          <div className="glass-section p-4 rounded-lg">
+        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
+          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg">
             <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
               camera settings
             </h3>
@@ -53,10 +53,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
         </LiquidGlass>
 
-        <div className="glass-divider" />
+        <div className="h-px bg-gradient-to-r from-transparent via-slate-300/50 dark:via-slate-600/50 to-transparent" />
 
-        <LiquidGlass displacementScale={18} aberrationIntensity={0.25}>
-          <div className="glass-section p-4 rounded-lg">
+        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
+          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg">
             <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
               rendering
             </h3>
@@ -89,10 +89,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
         </LiquidGlass>
 
-        <div className="glass-divider" />
+        <div className="h-px bg-gradient-to-r from-transparent via-slate-300/50 dark:via-slate-600/50 to-transparent" />
 
-        <LiquidGlass displacementScale={18} aberrationIntensity={0.25}>
-          <div className="glass-section p-4 rounded-lg">
+        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
+          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg">
             <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
               semantic layers
             </h3>
@@ -114,10 +114,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
         </LiquidGlass>
 
-        <div className="glass-divider" />
+        <div className="h-px bg-gradient-to-r from-transparent via-slate-300/50 dark:via-slate-600/50 to-transparent" />
 
-        <LiquidGlass displacementScale={18} aberrationIntensity={0.25}>
-          <div className="glass-section p-4 rounded-lg">
+        <LiquidGlass displacementScale={10} aberrationIntensity={0.15}>
+          <div className="bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/30 dark:border-black/30 p-4 rounded-lg shadow-lg">
             <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
               export
             </h3>

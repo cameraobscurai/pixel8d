@@ -37,10 +37,10 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
   onExportScreenshot
 }) => {
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 glass-toolbar border-b border-white/20 dark:border-black/20 p-6">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-white/20 dark:border-black/20 p-6">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-4">
-          <LiquidGlass displacementScale={15} aberrationIntensity={0.2}>
+          <LiquidGlass displacementScale={8} aberrationIntensity={0.1}>
             <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
               pixel8d
             </h1>
@@ -58,9 +58,9 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <LiquidGlass displacementScale={12} aberrationIntensity={0.15}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -70,22 +70,22 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
                   <Camera size={16} />
                   presets
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass-dropdown">
-                {presets.map((preset) => (
-                  <DropdownMenuItem 
-                    key={preset.name}
-                    onClick={() => onPresetSelect(preset)}
-                    className="cursor-pointer glass-menu-item"
-                  >
-                    {preset.name.toLowerCase()} view
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </LiquidGlass>
+              </LiquidGlass>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="glass-dropdown">
+              {presets.map((preset) => (
+                <DropdownMenuItem 
+                  key={preset.name}
+                  onClick={() => onPresetSelect(preset)}
+                  className="cursor-pointer glass-menu-item"
+                >
+                  {preset.name.toLowerCase()} view
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           
-          <LiquidGlass displacementScale={12} aberrationIntensity={0.15}>
+          <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
             <Button
               variant="ghost"
               size="sm"
@@ -98,7 +98,7 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
             </Button>
           </LiquidGlass>
           
-          <LiquidGlass displacementScale={12} aberrationIntensity={0.15}>
+          <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
             <Button
               variant="ghost"
               size="sm"
@@ -111,7 +111,7 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
             </Button>
           </LiquidGlass>
           
-          <LiquidGlass displacementScale={12} aberrationIntensity={0.15}>
+          <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
             <Button
               variant="ghost"
               size="sm"
@@ -124,7 +124,7 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
             </Button>
           </LiquidGlass>
           
-          <LiquidGlass displacementScale={12} aberrationIntensity={0.15}>
+          <LiquidGlass displacementScale={6} aberrationIntensity={0.08}>
             <Button
               variant="ghost"
               size="sm"
