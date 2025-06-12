@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGLRenderer, PerspectiveCamera, OrthographicCamera, Scene, Vector3, MathUtils, FogExp2, Color, Camera, Box3 } from 'three';
 import { OrbitControls } from 'three-stdlib';
@@ -163,7 +164,7 @@ export const LumaSplatViewer: React.FC = () => {
     setIsOrthographic(prev => !prev);
   }, [getCurrentCamera, isOrthographic]);
 
-  // Handle camera mode changes with useEffect to avoid timing issues
+  // Handle camera mode changes - this is where we fix the OrbitControls reference
   useEffect(() => {
     if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current) return;
 
@@ -187,12 +188,12 @@ export const LumaSplatViewer: React.FC = () => {
       newCamera.updateProjectionMatrix();
     }
 
-    // Update controls to use new camera
+    // CRITICAL FIX: Update controls to use new camera immediately
     controls.object = newCamera;
     controls.target.set(0, 0, 0);
     controls.update();
     
-    console.log('PIXEL8D: Camera mode switch complete');
+    console.log('PIXEL8D: Camera mode switch complete, controls now reference:', isOrthographic ? 'orthographic' : 'perspective', 'camera');
   }, [isOrthographic, updateOrthographicCamera, calculateFOVFromFocalLength, cameraState.focalLength, aspectRatio]);
 
   const exportScreenshot = useCallback(async (options: { 
@@ -339,9 +340,19 @@ export const LumaSplatViewer: React.FC = () => {
     isManualUpdateRef.current = true;
     
     const camera = getCurrentCamera();
-    if (!camera) return;
-
     const controls = controlsRef.current;
+    
+    if (!camera) {
+      console.error('PIXEL8D: No current camera available for manual update');
+      return;
+    }
+
+    // CRITICAL FIX: Ensure controls are using the correct camera before any updates
+    if (controls.object !== camera) {
+      console.log('PIXEL8D: Fixing controls object reference - was:', controls.object.type, 'should be:', camera.type);
+      controls.object = camera;
+    }
+
     const { position, rotation, focalLength, orthographicZoom } = cameraState;
 
     // Update camera position
@@ -371,6 +382,8 @@ export const LumaSplatViewer: React.FC = () => {
     controls.object.rotation.copy(camera.rotation);
     controls.target.set(0, 0, 0);
     controls.update();
+
+    console.log('PIXEL8D: Manual camera update complete for', camera.type, 'camera');
 
     // Allow OrbitControls to take over again after a brief delay
     setTimeout(() => {
