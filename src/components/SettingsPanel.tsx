@@ -4,9 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Download, Grid3X3 } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 interface SettingsPanelProps {
   isOrthographic: boolean;
@@ -17,7 +16,7 @@ interface SettingsPanelProps {
   onGridToggle: (show: boolean) => void;
   depthBufferEnabled: boolean;
   onDepthBufferToggle: (enabled: boolean) => void;
-  onExportScreenshot: (resolution: string) => void;
+  onExportScreenshot: () => void;
   semanticMask: string;
   onSemanticMaskChange: (mask: string) => void;
 }
@@ -123,26 +122,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             Export
           </h3>
           
-          <div className="space-y-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onExportScreenshot('1920x1080')}
-              className="w-full gap-2"
-            >
-              <Download size={16} />
-              Export 1080p
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onExportScreenshot('3840x2160')}
-              className="w-full gap-2"
-            >
-              <Download size={16} />
-              Export 4K
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={onExportScreenshot}
+            className="w-full gap-2"
+          >
+            <Download size={16} />
+            High-Resolution Export
+          </Button>
         </div>
       </div>
     </Card>

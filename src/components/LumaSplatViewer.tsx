@@ -4,6 +4,7 @@ import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
 import { SettingsPanel } from './SettingsPanel';
+import { ExportDialog } from './ExportDialog';
 
 interface CameraState {
   position: { x: number; y: number; z: number };
@@ -60,6 +61,8 @@ export const LumaSplatViewer: React.FC = () => {
   const isManualUpdateRef = useRef(false);
   const hasInitializedRef = useRef(false);
   const debounceTimerRef = useRef<NodeJS.Timeout>();
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [cameraState, setCameraState] = useState<CameraState>(INITIAL_CAMERA_STATE);
   const [aspectRatio, setAspectRatio] = useState(16/9);
@@ -158,7 +161,12 @@ export const LumaSplatViewer: React.FC = () => {
     });
   }, [getCurrentCamera, updateOrthographicCamera, calculateFOVFromFocalLength, cameraState.focalLength, aspectRatio]);
 
-  const exportScreenshot = useCallback((resolution?: string) => {
+  const exportScreenshot = useCallback(async (options: { 
+    resolution: string; 
+    quality: number; 
+    format: 'png' | 'jpeg';
+    filename?: string;
+  }) => {
     if (!rendererRef.current || !sceneRef.current) return;
 
     const renderer = rendererRef.current;
@@ -167,38 +175,86 @@ export const LumaSplatViewer: React.FC = () => {
     
     if (!camera) return;
 
-    let width = renderer.domElement.width;
-    let height = renderer.domElement.height;
+    setIsExporting(true);
 
-    if (resolution) {
-      const [w, h] = resolution.split('x').map(Number);
-      width = w;
-      height = h;
+    try {
+      // Parse resolution
+      const [width, height] = options.resolution.split('x').map(Number);
+      
+      // Store original renderer size
+      const originalSize = renderer.getSize(new Vector3());
+      const originalPixelRatio = renderer.getPixelRatio();
+
+      // Create high-resolution render target
+      const pixelRatio = Math.min(window.devicePixelRatio, 2); // Cap at 2x for performance
+      const renderWidth = width * pixelRatio;
+      const renderHeight = height * pixelRatio;
+
+      // Temporarily update renderer for high-res capture
+      renderer.setSize(renderWidth, renderHeight, false);
+      renderer.setPixelRatio(1); // We handle pixel ratio manually
+
+      // Update camera aspect ratio temporarily
+      const originalAspect = camera.aspect;
+      camera.aspect = width / height;
+      
+      if (camera instanceof PerspectiveCamera) {
+        camera.updateProjectionMatrix();
+      } else if (camera instanceof OrthographicCamera) {
+        const bbox = new Box3().setFromObject(splatsRef.current);
+        const size = bbox.getSize(new Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z) || 5;
+        
+        const zoom = cameraState.orthographicZoom;
+        const frustumSize = maxDim * 2 / zoom;
+        
+        camera.left = -frustumSize * (width / height) / 2;
+        camera.right = frustumSize * (width / height) / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = -frustumSize / 2;
+        camera.updateProjectionMatrix();
+      }
+
+      // Render the scene at high resolution
+      renderer.render(scene, camera);
+
+      // Get the canvas data
+      const canvas = renderer.domElement;
+      const dataURL = canvas.toDataURL(
+        options.format === 'jpeg' ? 'image/jpeg' : 'image/png',
+        options.quality / 100
+      );
+
+      // Create and trigger download
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+      const filename = options.filename || `pixel8d-export-${timestamp}`;
+      link.download = `${filename}.${options.format}`;
+      link.href = dataURL;
+      link.click();
+
+      // Restore original renderer settings
+      renderer.setSize(originalSize.x, originalSize.y, false);
+      renderer.setPixelRatio(originalPixelRatio);
+      
+      // Restore camera aspect ratio
+      camera.aspect = originalAspect;
+      if (camera instanceof PerspectiveCamera) {
+        camera.updateProjectionMatrix();
+      } else if (camera instanceof OrthographicCamera) {
+        updateOrthographicCamera();
+      }
+
+      console.log(`PIXEL8D: Screenshot exported at ${options.resolution} (${options.format.toUpperCase()}, ${options.quality}% quality)`);
+      
+    } catch (error) {
+      console.error('PIXEL8D: Export failed:', error);
+      // TODO: Show error toast
+    } finally {
+      setIsExporting(false);
+      setShowExportDialog(false);
     }
-
-    // Create temporary canvas for high-res export
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
-
-    const tempRenderer = new WebGLRenderer({ 
-      canvas: tempCanvas, 
-      preserveDrawingBuffer: true,
-      antialias: true
-    });
-    
-    tempRenderer.setSize(width, height);
-    tempRenderer.render(scene, camera);
-
-    // Download the image
-    const link = document.createElement('a');
-    link.download = `pixel8d-export-${Date.now()}.png`;
-    link.href = tempCanvas.toDataURL();
-    link.click();
-
-    tempRenderer.dispose();
-    console.log('PIXEL8D: Screenshot exported at', resolution || 'current resolution');
-  }, [getCurrentCamera]);
+  }, [getCurrentCamera, cameraState.orthographicZoom, updateOrthographicCamera]);
 
   const applyQualityPreset = useCallback((preset: string) => {
     const settings = QUALITY_PRESETS[preset as keyof typeof QUALITY_PRESETS];
@@ -587,7 +643,7 @@ export const LumaSplatViewer: React.FC = () => {
         onCameraModeToggle={switchCameraMode}
         showSettings={showSettings}
         onSettingsToggle={() => setShowSettings(prev => !prev)}
-        onExportScreenshot={() => exportScreenshot()}
+        onExportScreenshot={() => setShowExportDialog(true)}
       />
       
       <div className="flex-1 flex">
@@ -603,6 +659,16 @@ export const LumaSplatViewer: React.FC = () => {
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Loading PIXEL8D...</p>
                 <p className="text-xs text-muted-foreground mt-2">Initializing Gaussian Splat viewer</p>
+              </div>
+            </div>
+          )}
+
+          {isExporting && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
+              <div className="text-center">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Exporting high-resolution image...</p>
+                <p className="text-xs text-muted-foreground mt-2">Please wait while we render your image</p>
               </div>
             </div>
           )}
@@ -632,7 +698,7 @@ export const LumaSplatViewer: React.FC = () => {
             onGridToggle={setShowGrid}
             depthBufferEnabled={depthBufferEnabled}
             onDepthBufferToggle={handleDepthBufferToggle}
-            onExportScreenshot={exportScreenshot}
+            onExportScreenshot={() => setShowExportDialog(true)}
             semanticMask={semanticMask}
             onSemanticMaskChange={handleSemanticMaskChange}
           />
@@ -647,6 +713,15 @@ export const LumaSplatViewer: React.FC = () => {
           />
         )}
       </div>
+
+      {showExportDialog && (
+        <ExportDialog
+          isOpen={showExportDialog}
+          onClose={() => setShowExportDialog(false)}
+          onExport={exportScreenshot}
+          isExporting={isExporting}
+        />
+      )}
     </div>
   );
 };
