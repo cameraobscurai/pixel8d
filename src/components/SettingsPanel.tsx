@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 
 interface SettingsPanelProps {
-  isOrthographic: boolean;
-  onCameraModeChange: (orthographic: boolean) => void;
   qualityPreset: string;
   onQualityChange: (preset: string) => void;
   showGrid: boolean;
@@ -22,8 +20,6 @@ interface SettingsPanelProps {
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
-  isOrthographic,
-  onCameraModeChange,
   qualityPreset,
   onQualityChange,
   showGrid,
@@ -35,103 +31,99 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onSemanticMaskChange
 }) => {
   return (
-    <Card className="w-80 p-6 bg-muted/50 border-border">
-      <div className="space-y-6">
+    <div className="w-80 glass-panel border-l border-white/20 dark:border-black/20">
+      <div className="p-6 space-y-8">
         <div>
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
-            Camera Settings
+          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+            camera settings
           </h3>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Camera Mode</Label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Perspective</span>
-                <Switch
-                  checked={isOrthographic}
-                  onCheckedChange={onCameraModeChange}
-                />
-                <span className="text-xs text-muted-foreground">Orthographic</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Grid Overlay</Label>
+              <Label className="text-sm font-light text-slate-600 dark:text-slate-400">grid overlay</Label>
               <Switch
                 checked={showGrid}
                 onCheckedChange={onGridToggle}
+                className="glass-switch"
               />
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border pt-6">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
-            Rendering
+        <div className="glass-divider" />
+
+        <div>
+          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+            rendering
           </h3>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <Label className="text-sm font-medium mb-2 block">Quality Preset</Label>
+              <Label className="text-sm font-light text-slate-600 dark:text-slate-400 mb-3 block">quality preset</Label>
               <Select value={qualityPreset} onValueChange={onQualityChange}>
-                <SelectTrigger className="bg-muted border-border">
+                <SelectTrigger className="glass-select">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ultra">Ultra</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                <SelectContent className="glass-dropdown">
+                  <SelectItem value="ultra" className="glass-menu-item">ultra</SelectItem>
+                  <SelectItem value="high" className="glass-menu-item">high</SelectItem>
+                  <SelectItem value="medium" className="glass-menu-item">medium</SelectItem>
+                  <SelectItem value="low" className="glass-menu-item">low</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Depth Buffer</Label>
+              <Label className="text-sm font-light text-slate-600 dark:text-slate-400">depth buffer</Label>
               <Switch
                 checked={depthBufferEnabled}
                 onCheckedChange={onDepthBufferToggle}
+                className="glass-switch"
               />
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border pt-6">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
-            Semantic Layers
+        <div className="glass-divider" />
+
+        <div>
+          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+            semantic layers
           </h3>
           
           <div>
-            <Label className="text-sm font-medium mb-2 block">Layer Mask</Label>
+            <Label className="text-sm font-light text-slate-600 dark:text-slate-400 mb-3 block">layer mask</Label>
             <Select value={semanticMask} onValueChange={onSemanticMaskChange}>
-              <SelectTrigger className="bg-muted border-border">
+              <SelectTrigger className="glass-select">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Layers</SelectItem>
-                <SelectItem value="foreground">Foreground Only</SelectItem>
-                <SelectItem value="background">Background Only</SelectItem>
-                <SelectItem value="objects">Objects Only</SelectItem>
+              <SelectContent className="glass-dropdown">
+                <SelectItem value="all" className="glass-menu-item">all layers</SelectItem>
+                <SelectItem value="foreground" className="glass-menu-item">foreground only</SelectItem>
+                <SelectItem value="background" className="glass-menu-item">background only</SelectItem>
+                <SelectItem value="objects" className="glass-menu-item">objects only</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <div className="border-t border-border pt-6">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
-            Export
+        <div className="glass-divider" />
+
+        <div>
+          <h3 className="text-lg font-light text-slate-700 dark:text-slate-300 mb-6 tracking-wide">
+            export
           </h3>
           
           <Button
             variant="outline"
             onClick={onExportScreenshot}
-            className="w-full gap-2"
+            className="w-full glass-button gap-2"
           >
             <Download size={16} />
-            High-Resolution Export
+            high-resolution export
           </Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };

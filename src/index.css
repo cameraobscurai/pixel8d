@@ -1,6 +1,10 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap');
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
 
@@ -37,19 +41,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -99,5 +96,96 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+}
+
+/* Glass morphism utilities */
+@layer components {
+  .glass-panel {
+    @apply backdrop-blur-xl bg-white/70 dark:bg-black/40 
+           border border-white/20 dark:border-black/20 
+           shadow-2xl shadow-black/5 dark:shadow-black/25;
+  }
+
+  .glass-toolbar {
+    @apply backdrop-blur-xl bg-white/80 dark:bg-black/60 
+           border-white/30 dark:border-black/30;
+  }
+
+  .glass-button {
+    @apply backdrop-blur-sm bg-white/60 dark:bg-black/30 
+           border border-white/30 dark:border-black/30 
+           text-slate-700 dark:text-slate-300 font-light
+           hover:bg-white/80 dark:hover:bg-black/50 
+           hover:border-white/50 dark:hover:border-black/50
+           transition-all duration-200 ease-out
+           shadow-sm hover:shadow-md;
+  }
+
+  .glass-button-active {
+    @apply bg-white/90 dark:bg-black/60 
+           border-white/50 dark:border-black/50
+           shadow-md;
+  }
+
+  .glass-select {
+    @apply backdrop-blur-sm bg-white/60 dark:bg-black/30 
+           border border-white/30 dark:border-black/30 
+           text-slate-700 dark:text-slate-300 font-light
+           focus:bg-white/80 dark:focus:bg-black/50
+           focus:border-white/50 dark:focus:border-black/50;
+  }
+
+  .glass-dropdown {
+    @apply backdrop-blur-xl bg-white/90 dark:bg-black/80 
+           border border-white/30 dark:border-black/30 
+           shadow-2xl shadow-black/10 dark:shadow-black/40;
+  }
+
+  .glass-menu-item {
+    @apply text-slate-700 dark:text-slate-300 font-light
+           hover:bg-white/60 dark:hover:bg-black/40
+           focus:bg-white/60 dark:focus:bg-black/40;
+  }
+
+  .glass-switch {
+    @apply backdrop-blur-sm border border-white/30 dark:border-black/30;
+  }
+
+  .glass-divider {
+    @apply h-px bg-gradient-to-r from-transparent via-slate-300/50 dark:via-slate-600/50 to-transparent;
+  }
+
+  /* Fluid typography */
+  .fluid {
+    --font-level: 0;
+    --font-size-min: 16;
+    --font-size-max: 20;
+    --font-ratio-min: 1.2;
+    --font-ratio-max: 1.33;
+    --font-width-min: 375;
+    --font-width-max: 1500;
+    
+    --fluid-min: calc(
+      var(--font-size-min) * pow(var(--font-ratio-min), var(--font-level))
+    );
+    --fluid-max: calc(
+      var(--font-size-max) * pow(var(--font-ratio-max), var(--font-level))
+    );
+    --fluid-preferred: calc(
+      (var(--fluid-max) - var(--fluid-min)) /
+        (var(--font-width-max) - var(--font-width-min))
+    );
+    --fluid-type: clamp(
+      (var(--fluid-min) / 16) * 1rem,
+      ((var(--fluid-min) / 16) * 1rem) -
+        (((var(--fluid-preferred) * var(--font-width-min)) / 16) * 1rem) +
+        (var(--fluid-preferred) * 100vi),
+      (var(--fluid-max) / 16) * 1rem
+    );
+    
+    font-size: var(--fluid-type);
   }
 }

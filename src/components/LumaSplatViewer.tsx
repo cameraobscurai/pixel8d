@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGLRenderer, PerspectiveCamera, OrthographicCamera, Scene, Vector3, MathUtils, FogExp2, Color, Camera, Box3 } from 'three';
+import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
@@ -11,7 +11,6 @@ interface CameraState {
   position: { x: number; y: number; z: number };
   rotation: { roll: number; pitch: number; yaw: number };
   focalLength: number;
-  orthographicZoom: number;
 }
 
 interface CameraPreset {
@@ -19,14 +18,12 @@ interface CameraPreset {
   position: { x: number; y: number; z: number };
   rotation: { roll: number; pitch: number; yaw: number };
   focalLength: number;
-  orthographicZoom: number;
 }
 
 const INITIAL_CAMERA_STATE: CameraState = {
   position: { x: -2.76, y: 0.03, z: -2.25 },
   rotation: { roll: -179.35, pitch: -179.16, yaw: -50.84 },
-  focalLength: 20.10,
-  orthographicZoom: 1.0
+  focalLength: 20.10
 };
 
 const RESET_CAMERA_PRESET: CameraPreset = {
@@ -35,17 +32,16 @@ const RESET_CAMERA_PRESET: CameraPreset = {
 };
 
 const CAMERA_PRESETS: CameraPreset[] = [
-  { name: 'Front', position: { x: 0, y: 0, z: 3 }, rotation: { roll: 0, pitch: 0, yaw: 0 }, focalLength: 35, orthographicZoom: 1.0 },
-  { name: 'Side', position: { x: 3, y: 0, z: 0 }, rotation: { roll: 0, pitch: 0, yaw: 90 }, focalLength: 35, orthographicZoom: 1.0 },
-  { name: 'Top', position: { x: 0, y: 3, z: 0 }, rotation: { roll: 0, pitch: -90, yaw: 0 }, focalLength: 35, orthographicZoom: 1.0 },
-  { name: 'Perspective', position: { x: 2, y: 1, z: 2 }, rotation: { roll: 0, pitch: -15, yaw: 45 }, focalLength: 28, orthographicZoom: 0.8 }
+  { name: 'Front', position: { x: 0, y: 0, z: 3 }, rotation: { roll: 0, pitch: 0, yaw: 0 }, focalLength: 35 },
+  { name: 'Side', position: { x: 3, y: 0, z: 0 }, rotation: { roll: 0, pitch: 0, yaw: 90 }, focalLength: 35 },
+  { name: 'Top', position: { x: 0, y: 3, z: 0 }, rotation: { roll: 0, pitch: -90, yaw: 0 }, focalLength: 35 },
+  { name: 'Perspective', position: { x: 2, y: 1, z: 2 }, rotation: { roll: 0, pitch: -15, yaw: 45 }, focalLength: 28 }
 ];
 
 const BOUNDS = {
   position: { min: -10, max: 10 },
   rotation: { min: -180, max: 180 },
-  focalLength: { min: 10, max: 100 },
-  orthographicZoom: { min: 0.1, max: 5.0 }
+  focalLength: { min: 10, max: 100 }
 };
 
 const QUALITY_PRESETS = {
@@ -59,8 +55,7 @@ export const LumaSplatViewer: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
-  const perspectiveCameraRef = useRef<PerspectiveCamera | null>(null);
-  const orthographicCameraRef = useRef<OrthographicCamera | null>(null);
+  const cameraRef = useRef<PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const splatsRef = useRef<any>(null);
   const animationIdRef = useRef<number>();
@@ -75,7 +70,6 @@ export const LumaSplatViewer: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [smoothness, setSmoothness] = useState(0.1);
-  const [isOrthographic, setIsOrthographic] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [qualityPreset, setQualityPreset] = useState('high');
   const [showGrid, setShowGrid] = useState(false);
@@ -111,104 +105,17 @@ export const LumaSplatViewer: React.FC = () => {
     return { width: 1920, height: 1080, aspectRatio: 16/9 };
   }, []);
 
-  const getCurrentCamera = useCallback((): Camera | null => {
-    return isOrthographic ? orthographicCameraRef.current : perspectiveCameraRef.current;
-  }, [isOrthographic]);
-
-  const updateOrthographicCamera = useCallback(() => {
-    if (!orthographicCameraRef.current) return;
-
-    const camera = orthographicCameraRef.current;
-    let maxDim = 5; // Default fallback
-
-    // Calculate bounds from splats if available
-    if (splatsRef.current) {
-      try {
-        const bbox = new Box3().setFromObject(splatsRef.current);
-        const size = bbox.getSize(new Vector3());
-        maxDim = Math.max(size.x, size.y, size.z) || 5;
-      } catch (error) {
-        console.warn('PIXEL8D: Could not calculate splat bounds, using fallback');
-      }
-    }
-    
-    const zoom = cameraState.orthographicZoom;
-    const frustumSize = maxDim * 2 / zoom;
-    
-    camera.left = -frustumSize * aspectRatio / 2;
-    camera.right = frustumSize * aspectRatio / 2;
-    camera.top = frustumSize / 2;
-    camera.bottom = -frustumSize / 2;
-    camera.updateProjectionMatrix();
-  }, [cameraState.orthographicZoom, aspectRatio]);
-
-  const switchCameraMode = useCallback(() => {
-    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current) {
-      console.warn('PIXEL8D: Cameras or controls not ready for mode switch');
-      return;
-    }
-
-    const currentCamera = getCurrentCamera();
-    if (!currentCamera) {
-      console.warn('PIXEL8D: No current camera available');
-      return;
-    }
-
-    console.log('PIXEL8D: Switching camera mode from', isOrthographic ? 'orthographic' : 'perspective');
-
-    // Store current camera state
-    const currentPos = currentCamera.position.clone();
-    const currentRot = currentCamera.rotation.clone();
-
-    // Toggle the mode
-    setIsOrthographic(prev => !prev);
-  }, [getCurrentCamera, isOrthographic]);
-
-  // Handle camera mode changes - this is where we fix the OrbitControls reference
-  useEffect(() => {
-    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current) return;
-
-    const newCamera = isOrthographic ? orthographicCameraRef.current : perspectiveCameraRef.current;
-    const controls = controlsRef.current;
-
-    console.log('PIXEL8D: Applying camera mode switch to', isOrthographic ? 'orthographic' : 'perspective');
-
-    // Get current camera for state transfer
-    const currentCamera = isOrthographic ? perspectiveCameraRef.current : orthographicCameraRef.current;
-    
-    // Transfer position and rotation from previous camera
-    newCamera.position.copy(currentCamera.position);
-    newCamera.rotation.copy(currentCamera.rotation);
-    
-    if (isOrthographic) {
-      updateOrthographicCamera();
-    } else {
-      const fov = calculateFOVFromFocalLength(cameraState.focalLength, aspectRatio);
-      (newCamera as PerspectiveCamera).fov = fov;
-      newCamera.updateProjectionMatrix();
-    }
-
-    // CRITICAL FIX: Update controls to use new camera immediately
-    controls.object = newCamera;
-    controls.target.set(0, 0, 0);
-    controls.update();
-    
-    console.log('PIXEL8D: Camera mode switch complete, controls now reference:', isOrthographic ? 'orthographic' : 'perspective', 'camera');
-  }, [isOrthographic, updateOrthographicCamera, calculateFOVFromFocalLength, cameraState.focalLength, aspectRatio]);
-
   const exportScreenshot = useCallback(async (options: { 
     resolution: string; 
     quality: number; 
     format: 'png' | 'jpeg';
     filename?: string;
   }) => {
-    if (!rendererRef.current || !sceneRef.current) return;
+    if (!rendererRef.current || !sceneRef.current || !cameraRef.current) return;
 
     const renderer = rendererRef.current;
     const scene = sceneRef.current;
-    const camera = getCurrentCamera();
-    
-    if (!camera) return;
+    const camera = cameraRef.current;
 
     setIsExporting(true);
 
@@ -221,34 +128,18 @@ export const LumaSplatViewer: React.FC = () => {
       const originalPixelRatio = renderer.getPixelRatio();
 
       // Create high-resolution render target
-      const pixelRatio = Math.min(window.devicePixelRatio, 2); // Cap at 2x for performance
+      const pixelRatio = Math.min(window.devicePixelRatio, 2);
       const renderWidth = width * pixelRatio;
       const renderHeight = height * pixelRatio;
 
       // Temporarily update renderer for high-res capture
       renderer.setSize(renderWidth, renderHeight, false);
-      renderer.setPixelRatio(1); // We handle pixel ratio manually
+      renderer.setPixelRatio(1);
 
       // Update camera aspect ratio temporarily
       const originalAspect = camera.aspect;
       camera.aspect = width / height;
-      
-      if (camera instanceof PerspectiveCamera) {
-        camera.updateProjectionMatrix();
-      } else if (camera instanceof OrthographicCamera) {
-        const bbox = new Box3().setFromObject(splatsRef.current);
-        const size = bbox.getSize(new Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z) || 5;
-        
-        const zoom = cameraState.orthographicZoom;
-        const frustumSize = maxDim * 2 / zoom;
-        
-        camera.left = -frustumSize * (width / height) / 2;
-        camera.right = frustumSize * (width / height) / 2;
-        camera.top = frustumSize / 2;
-        camera.bottom = -frustumSize / 2;
-        camera.updateProjectionMatrix();
-      }
+      camera.updateProjectionMatrix();
 
       // Render the scene at high resolution
       renderer.render(scene, camera);
@@ -274,22 +165,17 @@ export const LumaSplatViewer: React.FC = () => {
       
       // Restore camera aspect ratio
       camera.aspect = originalAspect;
-      if (camera instanceof PerspectiveCamera) {
-        camera.updateProjectionMatrix();
-      } else if (camera instanceof OrthographicCamera) {
-        updateOrthographicCamera();
-      }
+      camera.updateProjectionMatrix();
 
       console.log(`PIXEL8D: Screenshot exported at ${options.resolution} (${options.format.toUpperCase()}, ${options.quality}% quality)`);
       
     } catch (error) {
       console.error('PIXEL8D: Export failed:', error);
-      // TODO: Show error toast
     } finally {
       setIsExporting(false);
       setShowExportDialog(false);
     }
-  }, [getCurrentCamera, cameraState.orthographicZoom, updateOrthographicCamera]);
+  }, []);
 
   const applyQualityPreset = useCallback((preset: string) => {
     const settings = QUALITY_PRESETS[preset as keyof typeof QUALITY_PRESETS];
@@ -307,12 +193,10 @@ export const LumaSplatViewer: React.FC = () => {
   }, []);
 
   const updateCameraFromControls = useCallback(() => {
-    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current || 
+    if (!cameraRef.current || !controlsRef.current || 
         isManualUpdateRef.current || !hasInitializedRef.current || isSliderActiveRef.current) return;
 
-    const camera = getCurrentCamera();
-    if (!camera) return;
-
+    const camera = cameraRef.current;
     const position = camera.position;
     
     // Extract rotation from camera's current orientation
@@ -322,7 +206,7 @@ export const LumaSplatViewer: React.FC = () => {
       yaw: MathUtils.radToDeg(camera.rotation.y)
     };
 
-    // Calculate focal length from current FOV using proper aspect ratio
+    // Calculate focal length from current FOV
     const focalLength = calculateFocalLengthFromFOV(camera.fov, aspectRatio);
 
     setCameraState(prev => ({
@@ -331,29 +215,17 @@ export const LumaSplatViewer: React.FC = () => {
       rotation,
       focalLength
     }));
-  }, [aspectRatio, calculateFocalLengthFromFOV, getCurrentCamera]);
+  }, [aspectRatio, calculateFocalLengthFromFOV]);
 
   const updateCameraManually = useCallback(() => {
-    if (!perspectiveCameraRef.current || !orthographicCameraRef.current || !controlsRef.current) return;
+    if (!cameraRef.current || !controlsRef.current) return;
 
     console.log('PIXEL8D: Updating camera manually to:', cameraState);
     isManualUpdateRef.current = true;
     
-    const camera = getCurrentCamera();
+    const camera = cameraRef.current;
     const controls = controlsRef.current;
-    
-    if (!camera) {
-      console.error('PIXEL8D: No current camera available for manual update');
-      return;
-    }
-
-    // CRITICAL FIX: Ensure controls are using the correct camera before any updates
-    if (controls.object !== camera) {
-      console.log('PIXEL8D: Fixing controls object reference - was:', controls.object.type, 'should be:', camera.type);
-      controls.object = camera;
-    }
-
-    const { position, rotation, focalLength, orthographicZoom } = cameraState;
+    const { position, rotation, focalLength } = cameraState;
 
     // Update camera position
     camera.position.set(position.x, position.y, position.z);
@@ -365,15 +237,9 @@ export const LumaSplatViewer: React.FC = () => {
       MathUtils.degToRad(rotation.roll)
     );
 
-    if (!isOrthographic) {
-      // Update camera focal length with proper aspect ratio handling
-      const fov = calculateFOVFromFocalLength(focalLength, aspectRatio);
-      (camera as PerspectiveCamera).fov = fov;
-    } else {
-      updateOrthographicCamera();
-    }
-    
-    // Ensure aspect ratio is properly set
+    // Update camera focal length
+    const fov = calculateFOVFromFocalLength(focalLength, aspectRatio);
+    camera.fov = fov;
     camera.aspect = aspectRatio;
     camera.updateProjectionMatrix();
 
@@ -383,21 +249,21 @@ export const LumaSplatViewer: React.FC = () => {
     controls.target.set(0, 0, 0);
     controls.update();
 
-    console.log('PIXEL8D: Manual camera update complete for', camera.type, 'camera');
+    console.log('PIXEL8D: Manual camera update complete');
 
     // Allow OrbitControls to take over again after a brief delay
     setTimeout(() => {
       isManualUpdateRef.current = false;
     }, 50);
-  }, [cameraState, aspectRatio, calculateFOVFromFocalLength, isOrthographic, updateOrthographicCamera, getCurrentCamera]);
+  }, [cameraState, aspectRatio, calculateFOVFromFocalLength]);
 
   const animateToPreset = useCallback((preset: CameraPreset) => {
-    if (!perspectiveCameraRef.current || !orthographicCameraRef.current) return;
+    if (!cameraRef.current) return;
 
     console.log('PIXEL8D: Animating to preset:', preset.name);
     
     const startState = { ...cameraState };
-    const duration = 1000; // 1 second
+    const duration = 1000;
     const startTime = performance.now();
     
     isManualUpdateRef.current = true;
@@ -420,8 +286,7 @@ export const LumaSplatViewer: React.FC = () => {
           pitch: startState.rotation.pitch + (preset.rotation.pitch - startState.rotation.pitch) * easeProgress,
           yaw: startState.rotation.yaw + (preset.rotation.yaw - startState.rotation.yaw) * easeProgress,
         },
-        focalLength: startState.focalLength + (preset.focalLength - startState.focalLength) * easeProgress,
-        orthographicZoom: startState.orthographicZoom + (preset.orthographicZoom - startState.orthographicZoom) * easeProgress
+        focalLength: startState.focalLength + (preset.focalLength - startState.focalLength) * easeProgress
       };
 
       setCameraState(interpolatedState);
@@ -429,7 +294,6 @@ export const LumaSplatViewer: React.FC = () => {
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        // Re-enable OrbitControls after animation completes
         console.log('PIXEL8D: Preset animation complete');
         setTimeout(() => {
           isManualUpdateRef.current = false;
@@ -438,7 +302,7 @@ export const LumaSplatViewer: React.FC = () => {
     };
 
     requestAnimationFrame(animate);
-  }, [cameraState, perspectiveCameraRef, orthographicCameraRef]);
+  }, [cameraState]);
 
   useEffect(() => {
     const initViewer = async () => {
@@ -452,14 +316,14 @@ export const LumaSplatViewer: React.FC = () => {
         
         const { LumaSplatsThree } = await import('@lumaai/luma-web');
 
-        // Initialize renderer with quality preset
+        // Initialize renderer
         const qualitySettings = QUALITY_PRESETS[qualityPreset as keyof typeof QUALITY_PRESETS];
         const renderer = new WebGLRenderer({
           canvas: canvasRef.current,
           antialias: qualitySettings.antialias,
           alpha: true,
           powerPreference: "high-performance",
-          preserveDrawingBuffer: true // Enable for screenshots
+          preserveDrawingBuffer: true
         });
         
         const updateSize = () => {
@@ -468,14 +332,9 @@ export const LumaSplatViewer: React.FC = () => {
           renderer.setSize(width, height);
           setAspectRatio(newAspectRatio);
           
-          // Update both cameras
-          if (perspectiveCameraRef.current) {
-            perspectiveCameraRef.current.aspect = newAspectRatio;
-            perspectiveCameraRef.current.updateProjectionMatrix();
-          }
-          
-          if (orthographicCameraRef.current) {
-            updateOrthographicCamera();
+          if (cameraRef.current) {
+            cameraRef.current.aspect = newAspectRatio;
+            cameraRef.current.updateProjectionMatrix();
           }
         };
         
@@ -485,26 +344,21 @@ export const LumaSplatViewer: React.FC = () => {
         const scene = new Scene();
         scene.fog = new FogExp2(new Color(0xe0e1ff), 0.02);
         
-        // Create both cameras
-        const perspectiveCamera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
-        const orthographicCamera = new OrthographicCamera(-5, 5, 5, -5, 0.1, 1000);
-        
-        // Set initial positions for both cameras
-        [perspectiveCamera, orthographicCamera].forEach(camera => {
-          camera.position.set(INITIAL_CAMERA_STATE.position.x, INITIAL_CAMERA_STATE.position.y, INITIAL_CAMERA_STATE.position.z);
-          camera.rotation.set(
-            MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.pitch),
-            MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.yaw),
-            MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.roll)
-          );
-        });
+        // Create camera
+        const camera = new PerspectiveCamera(75, initialAspectRatio, 0.1, 1000);
+        camera.position.set(INITIAL_CAMERA_STATE.position.x, INITIAL_CAMERA_STATE.position.y, INITIAL_CAMERA_STATE.position.z);
+        camera.rotation.set(
+          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.pitch),
+          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.yaw),
+          MathUtils.degToRad(INITIAL_CAMERA_STATE.rotation.roll)
+        );
         
         const initialFOV = calculateFOVFromFocalLength(INITIAL_CAMERA_STATE.focalLength, initialAspectRatio);
-        perspectiveCamera.fov = initialFOV;
-        perspectiveCamera.updateProjectionMatrix();
+        camera.fov = initialFOV;
+        camera.updateProjectionMatrix();
 
-        // Initialize controls with perspective camera
-        const controls = new OrbitControls(perspectiveCamera, renderer.domElement);
+        // Initialize controls
+        const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = qualitySettings.dampingFactor;
         controls.screenSpacePanning = false;
@@ -519,7 +373,7 @@ export const LumaSplatViewer: React.FC = () => {
         controls.target.set(0, 0, 0);
         controls.update();
 
-        // Load Luma Splats with optimizations
+        // Load Luma Splats
         const splats = new LumaSplatsThree({
           source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
           particleRevealEnabled: true,
@@ -527,13 +381,9 @@ export const LumaSplatViewer: React.FC = () => {
           loadingAnimationEnabled: true
         });
 
-        // Apply depth buffer fix when loaded
         splats.onLoad = () => {
           console.log('PIXEL8D: Luma splats loaded successfully');
           setIsLoading(false);
-          
-          // Update orthographic camera bounds based on loaded splat
-          updateOrthographicCamera();
           
           try {
             splats.captureCubemap(renderer).then((texture: any) => {
@@ -554,8 +404,7 @@ export const LumaSplatViewer: React.FC = () => {
         // Store references
         rendererRef.current = renderer;
         sceneRef.current = scene;
-        perspectiveCameraRef.current = perspectiveCamera;
-        orthographicCameraRef.current = orthographicCamera;
+        cameraRef.current = camera;
         controlsRef.current = controls;
         splatsRef.current = splats;
 
@@ -566,12 +415,9 @@ export const LumaSplatViewer: React.FC = () => {
 
         // Animation loop
         const animate = () => {
-          if (rendererRef.current && sceneRef.current && controlsRef.current) {
+          if (rendererRef.current && sceneRef.current && controlsRef.current && cameraRef.current) {
             controlsRef.current.update();
-            const currentCamera = getCurrentCamera();
-            if (currentCamera) {
-              rendererRef.current.render(sceneRef.current, currentCamera);
-            }
+            rendererRef.current.render(sceneRef.current, cameraRef.current);
           }
           animationIdRef.current = requestAnimationFrame(animate);
         };
@@ -606,11 +452,11 @@ export const LumaSplatViewer: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (getCurrentCamera() && controlsRef.current && !hasInitializedRef.current) {
+    if (cameraRef.current && controlsRef.current && !hasInitializedRef.current) {
       console.log('PIXEL8D: Setting initial camera state');
       updateCameraManually();
     }
-  }, [updateCameraManually, getCurrentCamera]);
+  }, [updateCameraManually]);
 
   useEffect(() => {
     if (controlsRef.current) {
@@ -639,18 +485,12 @@ export const LumaSplatViewer: React.FC = () => {
       if (newState.focalLength) {
         newState.focalLength = constrainValue(newState.focalLength, BOUNDS.focalLength.min, BOUNDS.focalLength.max);
       }
-
-      if (newState.orthographicZoom) {
-        newState.orthographicZoom = constrainValue(newState.orthographicZoom, BOUNDS.orthographicZoom.min, BOUNDS.orthographicZoom.max);
-      }
       
       return newState;
     });
 
-    // Apply changes immediately, no debouncing
     setTimeout(() => {
       updateCameraManually();
-      // Reset slider active flag after a short delay
       setTimeout(() => {
         isSliderActiveRef.current = false;
       }, 100);
@@ -683,20 +523,33 @@ export const LumaSplatViewer: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full h-screen bg-background flex flex-col">
+    <div className="w-full h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex flex-col relative overflow-hidden">
+      {/* Background grid pattern */}
+      <div className="absolute inset-0 opacity-20 dark:opacity-10">
+        <div 
+          className="w-full h-full"
+          style={{
+            backgroundImage: `
+              linear-gradient(90deg, rgb(0 0 0 / 0.1) 1px, transparent 1px),
+              linear-gradient(180deg, rgb(0 0 0 / 0.1) 1px, transparent 1px)
+            `,
+            backgroundSize: '45px 45px',
+            backgroundPosition: '16.2px 14.4px'
+          }}
+        />
+      </div>
+
       <ViewerToolbar 
         onReset={resetCamera} 
         isLoading={isLoading}
         presets={CAMERA_PRESETS}
         onPresetSelect={handlePresetSelect}
-        isOrthographic={isOrthographic}
-        onCameraModeToggle={switchCameraMode}
         showSettings={showSettings}
         onSettingsToggle={() => setShowSettings(prev => !prev)}
         onExportScreenshot={() => setShowExportDialog(true)}
       />
       
-      <div className="flex-1 flex">
+      <div className="flex-1 flex relative">
         <div className="flex-1 relative">
           <canvas
             ref={canvasRef}
@@ -704,34 +557,43 @@ export const LumaSplatViewer: React.FC = () => {
           />
           
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-              <div className="text-center">
-                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading PIXEL8D...</p>
-                <p className="text-xs text-muted-foreground mt-2">Initializing Gaussian Splat viewer</p>
+            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-white/30 dark:bg-black/30">
+              <div className="glass-panel p-8 text-center">
+                <div className="w-12 h-12 border-2 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                <h2 className="text-2xl font-medium mb-2 bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+                  loading pixel8d
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 text-sm">
+                  initializing gaussian splat viewer
+                </p>
               </div>
             </div>
           )}
 
           {isExporting && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-50">
-              <div className="text-center">
-                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Exporting high-resolution image...</p>
-                <p className="text-xs text-muted-foreground mt-2">Please wait while we render your image</p>
+            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-white/30 dark:bg-black/30 z-50">
+              <div className="glass-panel p-8 text-center">
+                <div className="w-12 h-12 border-2 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                <h2 className="text-2xl font-medium mb-2 bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+                  exporting image
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 text-sm">
+                  rendering high-resolution output
+                </p>
               </div>
             </div>
           )}
           
           {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-              <div className="text-center max-w-md p-6">
-                <p className="text-destructive mb-4">⚠️ {error}</p>
+            <div className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-white/30 dark:bg-black/30">
+              <div className="glass-panel p-8 text-center max-w-md">
+                <div className="text-4xl mb-4">⚠️</div>
+                <h2 className="text-xl font-medium mb-4 text-red-600 dark:text-red-400">{error}</h2>
                 <button 
                   onClick={() => window.location.reload()} 
-                  className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90 transition-colors"
+                  className="glass-button px-6 py-3 font-medium"
                 >
-                  Retry
+                  retry
                 </button>
               </div>
             </div>
@@ -740,8 +602,6 @@ export const LumaSplatViewer: React.FC = () => {
         
         {showSettings ? (
           <SettingsPanel
-            isOrthographic={isOrthographic}
-            onCameraModeChange={() => switchCameraMode()}
             qualityPreset={qualityPreset}
             onQualityChange={handleQualityChange}
             showGrid={showGrid}
@@ -759,7 +619,6 @@ export const LumaSplatViewer: React.FC = () => {
             bounds={BOUNDS}
             smoothness={smoothness}
             onSmoothnessChange={setSmoothness}
-            isOrthographic={isOrthographic}
           />
         )}
       </div>

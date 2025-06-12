@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Settings, Download, Share, Camera, Grid3X3, Eye } from 'lucide-react';
+import { RotateCcw, Settings, Download, Share, Camera } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +21,6 @@ interface ViewerToolbarProps {
   isLoading: boolean;
   presets: CameraPreset[];
   onPresetSelect: (preset: CameraPreset) => void;
-  isOrthographic: boolean;
-  onCameraModeToggle: () => void;
   showSettings: boolean;
   onSettingsToggle: () => void;
   onExportScreenshot: () => void;
@@ -33,106 +31,96 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
   isLoading,
   presets,
   onPresetSelect,
-  isOrthographic,
-  onCameraModeToggle,
   showSettings,
   onSettingsToggle,
   onExportScreenshot
 }) => {
   return (
-    <div className="border-b border-border bg-background p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            PIXEL8D
+    <div className="glass-toolbar border-b border-white/20 dark:border-black/20 p-6 relative z-10">
+      <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
+            pixel8d
           </h1>
-          <span className="text-sm text-muted-foreground">Professional Gaussian Splat Viewer</span>
+          <div className="h-6 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent dark:via-slate-600" />
+          <span className="text-sm text-slate-600 dark:text-slate-400 font-light">
+            professional gaussian splat viewer
+          </span>
           {isLoading && (
-            <div className="flex items-center gap-2 text-muted-foreground ml-4">
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm">Loading...</span>
+            <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 ml-6">
+              <div className="w-4 h-4 border border-current border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-sm font-light">loading...</span>
             </div>
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          <Button
-            variant={isOrthographic ? "default" : "outline"}
-            size="sm"
-            onClick={onCameraModeToggle}
-            disabled={isLoading}
-            className="gap-2"
-          >
-            <Eye size={16} />
-            {isOrthographic ? 'Orthographic' : 'Perspective'}
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 disabled={isLoading}
-                className="gap-2"
+                className="glass-button gap-2"
               >
                 <Camera size={16} />
-                Presets
+                presets
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="glass-dropdown">
               {presets.map((preset) => (
                 <DropdownMenuItem 
                   key={preset.name}
                   onClick={() => onPresetSelect(preset)}
-                  className="cursor-pointer"
+                  className="cursor-pointer glass-menu-item"
                 >
-                  {preset.name} View
+                  {preset.name.toLowerCase()} view
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
           
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={onReset}
             disabled={isLoading}
-            className="gap-2"
+            className="glass-button gap-2"
           >
             <RotateCcw size={16} />
-            Reset Camera
+            reset
           </Button>
           
           <Button
-            variant={showSettings ? "default" : "outline"}
+            variant="ghost"
             size="sm"
             onClick={onSettingsToggle}
             disabled={isLoading}
-            className="gap-2"
+            className={`glass-button gap-2 ${showSettings ? 'glass-button-active' : ''}`}
           >
             <Settings size={16} />
-            Settings
+            settings
           </Button>
           
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={onExportScreenshot}
             disabled={isLoading}
-            className="gap-2"
+            className="glass-button gap-2"
           >
             <Download size={16} />
-            Export
+            export
           </Button>
           
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             disabled={isLoading}
-            className="gap-2"
+            className="glass-button gap-2"
           >
             <Share size={16} />
-            Share
+            share
           </Button>
         </div>
       </div>
