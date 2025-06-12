@@ -18,9 +18,9 @@ interface CameraPreset {
 }
 
 const INITIAL_CAMERA_STATE: CameraState = {
-  position: { x: -2.83, y: -0.00, z: -1.95 },
-  rotation: { roll: 179.95, pitch: 179.94, yaw: -55.44 },
-  focalLength: 20.60
+  position: { x: -2.76, y: 0.03, z: -2.25 },
+  rotation: { roll: -179.35, pitch: -179.16, yaw: -50.84 },
+  focalLength: 20.10
 };
 
 const CAMERA_PRESETS: CameraPreset[] = [
