@@ -33,11 +33,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   return (
     <LiquidGlass
-      displacementScale={18}
-      aberrationIntensity={0.25}
-      turbulenceStrength={0.018}
-      animationSpeed={0.4}
-      style={{ width: '320px' }}
+      displacementScale={25}
+      aberrationIntensity={0.4}
+      animationSpeed={0.6}
+      className="w-80"
     >
       <div className="w-80 glass-panel border-l border-white/20 dark:border-black/20 backdrop-blur-xl bg-white/30 dark:bg-black/20">
         <div className="p-6 space-y-8">

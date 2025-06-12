@@ -38,11 +38,10 @@ export const ViewerToolbar: React.FC<ViewerToolbarProps> = ({
 }) => {
   return (
     <LiquidGlass
-      displacementScale={8}
-      aberrationIntensity={0.1}
-      turbulenceStrength={0.008}
-      animationSpeed={0.2}
-      style={{ width: '100%' }}
+      displacementScale={15}
+      aberrationIntensity={0.3}
+      animationSpeed={0.8}
+      className="w-full"
     >
       <div className="glass-toolbar border-b border-white/20 dark:border-black/20 p-6 relative z-10 backdrop-blur-xl bg-white/40 dark:bg-black/30">
         <div className="flex items-center justify-between max-w-7xl mx-auto">

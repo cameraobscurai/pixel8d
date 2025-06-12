@@ -57,11 +57,10 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
 
   return (
     <LiquidGlass
-      displacementScale={15}
-      aberrationIntensity={0.2}
-      turbulenceStrength={0.015}
-      animationSpeed={0.3}
-      style={{ width: '320px' }}
+      displacementScale={20}
+      aberrationIntensity={0.35}
+      animationSpeed={0.5}
+      className="w-80"
     >
       <Card className="w-80 p-6 glass-panel border-r border-white/20 dark:border-black/20 backdrop-blur-xl bg-white/30 dark:bg-black/20">
         <div className="space-y-6">
