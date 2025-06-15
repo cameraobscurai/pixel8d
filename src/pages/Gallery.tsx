@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Grid3X3, Grid2X2, LayoutGrid } from 'lucide-react';
 import { LumaGalleryItem } from '@/components/LumaGalleryItem';
@@ -9,19 +9,24 @@ interface LumaCapture {
   id: string;
   title: string;
   embedUrl: string;
-  thumbnail?: string;
+  thumbnail: string;
+  description?: string;
 }
 
 const LUMA_CAPTURES: LumaCapture[] = [
   {
     id: 'e769d12e-a0ac-4338-93bd-a82f078e0efc',
     title: 'Original Capture',
-    embedUrl: 'https://lumalabs.ai/embed/e769d12e-a0ac-4338-93bd-a82f078e0efc?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false'
+    embedUrl: 'https://lumalabs.ai/embed/e769d12e-a0ac-4338-93bd-a82f078e0efc?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=300&fit=crop',
+    description: 'Main demonstration capture'
   },
   {
     id: 'ae068d93-1a5f-4696-a9c9-743931ea1e5b',
     title: 'New Capture',
-    embedUrl: 'https://lumalabs.ai/embed/ae068d93-1a5f-4696-a9c9-743931ea1e5b?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false'
+    embedUrl: 'https://lumalabs.ai/embed/ae068d93-1a5f-4696-a9c9-743931ea1e5b?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop',
+    description: 'Secondary demonstration capture'
   }
 ];
 
@@ -29,6 +34,12 @@ type LayoutMode = 'masonry' | 'grid-2' | 'grid-3';
 
 const Gallery = () => {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('masonry');
+  const navigate = useNavigate();
+
+  const handleCaptureClick = (captureId: string) => {
+    // Navigate to main viewer with the selected capture
+    navigate(`/?capture=${captureId}`);
+  };
 
   const getGridClasses = () => {
     switch (layoutMode) {
@@ -107,6 +118,7 @@ const Gallery = () => {
               capture={capture}
               index={index}
               layoutMode={layoutMode}
+              onCaptureClick={handleCaptureClick}
             />
           ))}
         </div>

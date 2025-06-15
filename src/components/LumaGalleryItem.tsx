@@ -2,31 +2,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Maximize2 } from 'lucide-react';
+import { Play, ExternalLink, Eye } from 'lucide-react';
 
 interface LumaCapture {
   id: string;
   title: string;
   embedUrl: string;
-  thumbnail?: string;
+  thumbnail: string;
+  description?: string;
 }
 
 interface LumaGalleryItemProps {
   capture: LumaCapture;
   index: number;
   layoutMode: 'masonry' | 'grid-2' | 'grid-3';
+  onCaptureClick: (captureId: string) => void;
 }
 
 export const LumaGalleryItem: React.FC<LumaGalleryItemProps> = ({ 
   capture, 
   index, 
-  layoutMode 
+  layoutMode,
+  onCaptureClick
 }) => {
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -56,25 +57,13 @@ export const LumaGalleryItem: React.FC<LumaGalleryItemProps> = ({
     return baseHeights[index % baseHeights.length];
   };
 
-  const handlePlay = () => {
-    setIsLoaded(true);
-    setIsPlaying(true);
+  const handleMainViewClick = () => {
+    onCaptureClick(capture.id);
   };
 
-  const handlePause = () => {
-    setIsPlaying(false);
-    // Optionally unload iframe to save performance
-    setTimeout(() => {
-      if (!isPlaying) {
-        setIsLoaded(false);
-      }
-    }, 5000);
-  };
-
-  const handleFullscreen = () => {
-    if (iframeRef.current) {
-      iframeRef.current.requestFullscreen?.();
-    }
+  const handlePreviewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`https://lumalabs.ai/capture/${capture.id}`, '_blank');
   };
 
   const cardStyle = layoutMode === 'masonry' ? {
@@ -88,68 +77,69 @@ export const LumaGalleryItem: React.FC<LumaGalleryItemProps> = ({
   return (
     <Card 
       ref={cardRef}
-      className="group overflow-hidden bg-card hover:shadow-lg transition-all duration-300 relative"
+      className="group overflow-hidden bg-card hover:shadow-lg transition-all duration-300 relative cursor-pointer"
       style={cardStyle}
+      onClick={handleMainViewClick}
     >
       <CardContent className="p-0 h-full relative">
-        {!isLoaded ? (
-          // Placeholder with thumbnail and play button
-          <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            
-            {/* Thumbnail placeholder */}
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmM2Y0ZjYiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNlNWU3ZWIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0idXJsKCNhKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5YTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+')] bg-cover bg-center opacity-50" />
-            
-            {/* Play button */}
-            <Button
-              onClick={handlePlay}
-              size="lg"
-              className="relative z-10 rounded-full w-16 h-16 bg-primary/90 hover:bg-primary text-primary-foreground shadow-lg"
-            >
-              <Play size={24} className="ml-1" />
-            </Button>
-            
-            {/* Title overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white z-10">
-              <h3 className="font-semibold text-lg">{capture.title}</h3>
-              <p className="text-sm opacity-75">Click to load Gaussian Splat</p>
-            </div>
-          </div>
-        ) : isVisible ? (
-          // Actual iframe content
+        {isVisible ? (
           <div className="w-full h-full relative">
-            <iframe
-              ref={iframeRef}
-              src={capture.embedUrl}
-              className="w-full h-full border-none"
-              title={capture.title}
+            {/* Thumbnail Image */}
+            <img
+              src={capture.thumbnail}
+              alt={capture.title}
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                isImageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setIsImageLoaded(true)}
               loading="lazy"
-              allow="xr-spatial-tracking"
             />
             
-            {/* Control overlay */}
-            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                onClick={handlePause}
-                variant="secondary"
-                size="sm"
-                className="bg-black/50 hover:bg-black/70 text-white border-none"
-              >
-                <Pause size={16} />
-              </Button>
-              <Button
-                onClick={handleFullscreen}
-                variant="secondary"
-                size="sm"
-                className="bg-black/50 hover:bg-black/70 text-white border-none"
-              >
-                <Maximize2 size={16} />
-              </Button>
-            </div>
+            {/* Loading placeholder */}
+            {!isImageLoaded && (
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-purple-600/20 animate-pulse flex items-center justify-center">
+                <div className="text-muted-foreground">Loading...</div>
+              </div>
+            )}
             
-            {/* Title overlay for loaded content */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-              <h3 className="font-medium text-white text-sm">{capture.title}</h3>
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+            
+            {/* Content overlay */}
+            <div className="absolute inset-0 flex flex-col justify-between p-4 text-white">
+              {/* Top controls */}
+              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  onClick={handlePreviewClick}
+                  variant="secondary"
+                  size="sm"
+                  className="bg-black/50 hover:bg-black/70 text-white border-none"
+                >
+                  <ExternalLink size={16} />
+                </Button>
+              </div>
+              
+              {/* Bottom content */}
+              <div className="space-y-3">
+                {/* Main action button */}
+                <div className="flex justify-center">
+                  <Button
+                    size="lg"
+                    className="rounded-full w-16 h-16 bg-primary/90 hover:bg-primary text-primary-foreground shadow-lg opacity-80 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Eye size={24} />
+                  </Button>
+                </div>
+                
+                {/* Title and description */}
+                <div className="text-center">
+                  <h3 className="font-semibold text-lg mb-1">{capture.title}</h3>
+                  {capture.description && (
+                    <p className="text-sm opacity-75">{capture.description}</p>
+                  )}
+                  <p className="text-xs opacity-60 mt-2">Click to load in main viewer</p>
+                </div>
+              </div>
             </div>
           </div>
         ) : (

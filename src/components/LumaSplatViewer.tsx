@@ -19,6 +19,10 @@ interface CameraPreset {
   focalLength: number;
 }
 
+interface LumaSplatViewerProps {
+  captureSource?: string;
+}
+
 const INITIAL_CAMERA_STATE: CameraState = {
   position: { x: -2.76, y: 0.03, z: -2.25 },
   rotation: { roll: -179.35, pitch: -179.16, yaw: -50.84 },
@@ -50,7 +54,9 @@ const QUALITY_PRESETS = {
   low: { pixelRatio: 0.75, antialias: false, dampingFactor: 0.2 }
 };
 
-export const LumaSplatViewer: React.FC = () => {
+export const LumaSplatViewer: React.FC<LumaSplatViewerProps> = ({ 
+  captureSource = 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc' 
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
@@ -313,7 +319,7 @@ export const LumaSplatViewer: React.FC = () => {
       if (!canvasRef.current) return;
 
       try {
-        console.log('PIXEL8D: Initializing viewer...');
+        console.log('PIXEL8D: Initializing viewer with source:', captureSource);
         
         const { width, height, aspectRatio: initialAspectRatio } = getContainerDimensions();
         setAspectRatio(initialAspectRatio);
@@ -377,16 +383,21 @@ export const LumaSplatViewer: React.FC = () => {
         controls.target.set(0, 0, 0);
         controls.update();
 
-        // Load Luma Splats
+        // Clear previous splats if any
+        if (splatsRef.current) {
+          scene.remove(splatsRef.current);
+        }
+
+        // Load new Luma Splats with the provided capture source
         const splats = new LumaSplatsThree({
-          source: 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
+          source: captureSource,
           particleRevealEnabled: true,
           enableThreeShaderIntegration: false,
           loadingAnimationEnabled: true
         });
 
         splats.onLoad = () => {
-          console.log('PIXEL8D: Luma splats loaded successfully');
+          console.log('PIXEL8D: Luma splats loaded successfully from:', captureSource);
           setIsLoading(false);
           
           try {
@@ -440,6 +451,10 @@ export const LumaSplatViewer: React.FC = () => {
       }
     };
 
+    // Reset loading state when capture source changes
+    setIsLoading(true);
+    setError(null);
+    
     initViewer();
 
     return () => {
@@ -453,7 +468,7 @@ export const LumaSplatViewer: React.FC = () => {
         rendererRef.current.dispose();
       }
     };
-  }, []);
+  }, [captureSource]); // Re-initialize when captureSource changes
 
   useEffect(() => {
     if (cameraRef.current && controlsRef.current && !hasInitializedRef.current) {
