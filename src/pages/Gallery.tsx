@@ -14,24 +14,14 @@ interface LumaCapture {
 
 const LUMA_CAPTURES: LumaCapture[] = [
   {
-    id: '8e00421a-6e7b-4ce5-81e1-43e30f8df08d',
-    title: 'Capture 1',
-    embedUrl: 'https://lumalabs.ai/embed/8e00421a-6e7b-4ce5-81e1-43e30f8df08d?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false'
-  },
-  {
-    id: '7288f5f8-d095-40bf-aa62-7b9bc39a19a4',
-    title: 'Capture 2',
-    embedUrl: 'https://lumalabs.ai/embed/7288f5f8-d095-40bf-aa62-7b9bc39a19a4?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false'
-  },
-  {
-    id: 'c00d7bbc-e4f1-4261-ac6a-61d4eadfeb2c',
-    title: 'Capture 3',
-    embedUrl: 'https://lumalabs.ai/embed/c00d7bbc-e4f1-4261-ac6a-61d4eadfeb2c?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false'
-  },
-  {
     id: 'e769d12e-a0ac-4338-93bd-a82f078e0efc',
     title: 'Original Capture',
     embedUrl: 'https://lumalabs.ai/embed/e769d12e-a0ac-4338-93bd-a82f078e0efc?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false'
+  },
+  {
+    id: 'ae068d93-1a5f-4696-a9c9-743931ea1e5b',
+    title: 'New Capture',
+    embedUrl: 'https://lumalabs.ai/embed/ae068d93-1a5f-4696-a9c9-743931ea1e5b?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false'
   }
 ];
 
