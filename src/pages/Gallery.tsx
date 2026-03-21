@@ -27,6 +27,41 @@ const LUMA_CAPTURES: LumaCapture[] = [
     embedUrl: 'https://lumalabs.ai/embed/ae068d93-1a5f-4696-a9c9-743931ea1e5b?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
     thumbnail: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop',
     description: 'Secondary demonstration capture'
+  },
+  {
+    id: '5feaf010-a229-4172-946c-0d0a21b83125',
+    title: 'Sparkle Scene A',
+    embedUrl: 'https://lumalabs.ai/embed/5feaf010-a229-4172-946c-0d0a21b83125?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400&h=300&fit=crop',
+    description: 'Sparkle effect demonstration'
+  },
+  {
+    id: 'c95183e1-1887-4fc9-aee2-1f7f22f83709',
+    title: 'Sparkle Scene B',
+    embedUrl: 'https://lumalabs.ai/embed/c95183e1-1887-4fc9-aee2-1f7f22f83709?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop',
+    description: 'Immersive sparkle capture'
+  },
+  {
+    id: 'acd5c2c6-5bb9-40ba-8a64-853e7a40eba3',
+    title: 'Sparkle Scene C',
+    embedUrl: 'https://lumalabs.ai/embed/acd5c2c6-5bb9-40ba-8a64-853e7a40eba3?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&h=300&fit=crop',
+    description: 'Detailed sparkle environment'
+  },
+  {
+    id: '55669abc-4453-4efd-9934-48339c85581f',
+    title: 'Sparkle Scene D',
+    embedUrl: 'https://lumalabs.ai/embed/55669abc-4453-4efd-9934-48339c85581f?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=400&h=300&fit=crop',
+    description: 'Dynamic sparkle rendering'
+  },
+  {
+    id: 'c0d64d9e-a2af-41de-9b2c-c6cfd0e4db8b',
+    title: 'Sparkle Scene E',
+    embedUrl: 'https://lumalabs.ai/embed/c0d64d9e-a2af-41de-9b2c-c6cfd0e4db8b?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1500534314263-a834e34fe98d?w=400&h=300&fit=crop',
+    description: 'Expansive sparkle capture'
   }
 ];
 
