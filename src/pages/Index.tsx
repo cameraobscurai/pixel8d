@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Images, Sparkles, Shuffle, FileArchive } from 'lucide-react';
+import { Images, Sparkles, Shuffle, FileArchive, Wrench } from 'lucide-react';
 import { LumaSplatViewer } from '@/components/LumaSplatViewer';
 
 // Available captures
@@ -34,6 +34,12 @@ const Index = () => {
     <div className="relative">
       {/* Gallery navigation button */}
       <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <Link to="/editor">
+          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
+            <Wrench size={16} />
+            Editor
+          </Button>
+        </Link>
         <Link to="/sogs">
           <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
             <FileArchive size={16} />
