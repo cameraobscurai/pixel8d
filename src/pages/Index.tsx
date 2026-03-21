@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Images, Sparkles } from 'lucide-react';
+import { Images, Sparkles, Shuffle } from 'lucide-react';
 import { LumaSplatViewer } from '@/components/LumaSplatViewer';
 
 // Available captures
@@ -34,6 +34,12 @@ const Index = () => {
     <div className="relative">
       {/* Gallery navigation button */}
       <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <Link to="/stochastic">
+          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
+            <Shuffle size={16} />
+            Stochastic
+          </Button>
+        </Link>
         <Link to="/effects">
           <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
             <Sparkles size={16} />
