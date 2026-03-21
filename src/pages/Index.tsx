@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Images, Sparkles, Shuffle } from 'lucide-react';
+import { Images, Sparkles, Shuffle, FileArchive } from 'lucide-react';
 import { LumaSplatViewer } from '@/components/LumaSplatViewer';
 
 // Available captures
