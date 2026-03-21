@@ -200,7 +200,7 @@ export const SparkEffectsViewer: React.FC = () => {
     }
 
     const config = EFFECT_CONFIGS[effect];
-    const splatMesh = new SplatMesh({ url: config.splatUrl });
+    const splatMesh = new SplatMesh({ url: config.splatUrl }) as any;
     splatMesh.quaternion.set(1, 0, 0, 0);
     splatMesh.position.set(...config.position);
 
