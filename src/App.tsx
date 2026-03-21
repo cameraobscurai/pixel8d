@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Gallery from "./pages/Gallery";
 import Effects from "./pages/Effects";
+import Stochastic from "./pages/Stochastic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
