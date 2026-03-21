@@ -24,6 +24,7 @@ const App = () => (
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/effects" element={<Effects />} />
           <Route path="/stochastic" element={<Stochastic />} />
+          <Route path="/sogs" element={<Sogs />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
