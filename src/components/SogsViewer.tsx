@@ -1,8 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { SplatMesh } from '@sparkjsdev/spark';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { ArrowLeft } from 'lucide-react';
 
 export const SogsViewer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
