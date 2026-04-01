@@ -1,10 +1,12 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { SparkRenderer, SplatMesh, SparkControls } from '@sparkjsdev/spark';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { ArrowLeft } from 'lucide-react';
 
 export const StochasticViewer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
