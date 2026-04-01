@@ -318,6 +318,26 @@ export const SplatEditor: React.FC<SplatEditorProps> = ({ captureId }) => {
     resetFrameQuaternion(openCv);
   }, [openCv, resetFrameQuaternion]);
 
+  // Auto-load capture from gallery
+  useEffect(() => {
+    if (!captureId || !frameRef.current) return;
+    const capture = CAPTURES_BY_ID[captureId];
+    if (!capture) return;
+
+    // Fetch the PLY download URL from Luma API
+    fetch(`https://webapp.engineeringlumalabs.com/api/v3/captures/${captureId}/public`)
+      .then(r => r.json())
+      .then(data => {
+        const artifacts = data?.response?.artifacts || [];
+        const plyArtifact = artifacts.find((a: any) => a.type === 'gaussian_splatting_point_cloud.ply');
+        if (plyArtifact?.url) {
+          loadFiles([plyArtifact.url]);
+          setExportFilename(capture.title.replace(/\s+/g, '_').toLowerCase());
+        }
+      })
+      .catch(err => console.error('Failed to load capture for editing:', err));
+  }, [captureId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Drag and drop
   useEffect(() => {
     const canvas = canvasRef.current;
