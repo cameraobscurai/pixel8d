@@ -129,7 +129,7 @@ export const LumaSplatViewer: React.FC<LumaSplatViewerProps> = ({
       const [width, height] = options.resolution.split('x').map(Number);
       
       // Store original renderer size
-      const originalSize = renderer.getSize(new Vector3());
+      const originalSize = renderer.getSize(new Vector2());
       const originalPixelRatio = renderer.getPixelRatio();
 
       // Create high-resolution render target
