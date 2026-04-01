@@ -103,6 +103,9 @@ export const StochasticViewer: React.FC = () => {
         <div className="glass-specular"></div>
         <div className="glass-content glass-content--toolbar">
           <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm"><ArrowLeft size={14} /></Button>
+            </Link>
             <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
               stochastic sorting
             </h1>
