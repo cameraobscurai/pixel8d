@@ -34,6 +34,10 @@ const AVAILABLE_CAPTURES: Record<string, { title: string; source: string }> = {
   'c0d64d9e-a2af-41de-9b2c-c6cfd0e4db8b': {
     title: 'Sparkle Scene E',
     source: 'https://lumalabs.ai/capture/c0d64d9e-a2af-41de-9b2c-c6cfd0e4db8b'
+  },
+  '430f929f-1a2c-4059-950c-071506d4268d': {
+    title: 'Sparkle Scene F',
+    source: 'https://lumalabs.ai/capture/430f929f-1a2c-4059-950c-071506d4268d'
   }
 };
 
