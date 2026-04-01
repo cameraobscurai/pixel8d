@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { SplatMesh, dyno } from '@sparkjsdev/spark';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, ArrowLeft } from 'lucide-react';
 
 type EffectType = 'Magic' | 'Spread' | 'Unroll' | 'Twister' | 'Rain';
 
