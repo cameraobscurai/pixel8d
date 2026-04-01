@@ -1,11 +1,9 @@
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { SplatEditor } from '@/components/SplatEditor';
+import { useActiveCapture } from '@/hooks/useActiveCapture';
 
 const Editor = () => {
-  const [searchParams] = useSearchParams();
-  const captureId = searchParams.get('capture');
-  
+  const { captureId } = useActiveCapture();
   return <SplatEditor captureId={captureId} />;
 };
 
