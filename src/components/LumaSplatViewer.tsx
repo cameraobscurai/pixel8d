@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
+import { WebGLRenderer, PerspectiveCamera, Scene, Vector2, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
