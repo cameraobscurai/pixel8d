@@ -22,4 +22,8 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     exclude: ["@sparkjsdev/spark", "three"],
   },
+  worker: {
+    format: "es",
+  },
+  assetsInclude: ["**/*.wasm"],
 }));

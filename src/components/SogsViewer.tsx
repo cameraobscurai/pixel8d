@@ -1,8 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { SplatMesh } from '@sparkjsdev/spark';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { ArrowLeft } from 'lucide-react';
 
 export const SogsViewer: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,6 +82,9 @@ export const SogsViewer: React.FC = () => {
         <div className="glass-specular"></div>
         <div className="glass-content glass-content--toolbar">
           <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm"><ArrowLeft size={14} /></Button>
+            </Link>
             <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
               SOGS
             </h1>

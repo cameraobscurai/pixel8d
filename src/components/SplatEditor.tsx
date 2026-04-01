@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import {
@@ -13,8 +14,9 @@ import { Slider } from '@/components/ui/slider';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   FolderOpen, Link as LinkIcon, Download, RotateCcw, Eye, EyeOff,
-  Scissors, Bug, Camera, Upload, Trash2, Box
+  Scissors, Bug, Camera, Upload, Trash2, Box, ArrowLeft
 } from 'lucide-react';
+import { CAPTURES_BY_ID } from '@/lib/captures';
 
 interface LoadedSplat {
   id: string;
@@ -24,7 +26,11 @@ interface LoadedSplat {
   pathOrUrl: string;
 }
 
-export const SplatEditor: React.FC = () => {
+interface SplatEditorProps {
+  captureId?: string | null;
+}
+
+export const SplatEditor: React.FC<SplatEditorProps> = ({ captureId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -312,6 +318,26 @@ export const SplatEditor: React.FC = () => {
     resetFrameQuaternion(openCv);
   }, [openCv, resetFrameQuaternion]);
 
+  // Auto-load capture from gallery
+  useEffect(() => {
+    if (!captureId || !frameRef.current) return;
+    const capture = CAPTURES_BY_ID[captureId];
+    if (!capture) return;
+
+    // Fetch the PLY download URL from Luma API
+    fetch(`https://webapp.engineeringlumalabs.com/api/v3/captures/${captureId}/public`)
+      .then(r => r.json())
+      .then(data => {
+        const artifacts = data?.response?.artifacts || [];
+        const plyArtifact = artifacts.find((a: any) => a.type === 'gaussian_splatting_point_cloud.ply');
+        if (plyArtifact?.url) {
+          loadFiles([plyArtifact.url]);
+          setExportFilename(capture.title.replace(/\s+/g, '_').toLowerCase());
+        }
+      })
+      .catch(err => console.error('Failed to load capture for editing:', err));
+  }, [captureId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Drag and drop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -550,7 +576,12 @@ export const SplatEditor: React.FC = () => {
       {/* Left sidebar - File & Splat management */}
       <div className="w-80 flex-shrink-0 border-r border-border overflow-y-auto bg-background/95 backdrop-blur-sm z-20">
         <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-light tracking-wide text-foreground mb-4">splat editor</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm"><ArrowLeft size={14} /></Button>
+            </Link>
+            <h2 className="text-lg font-light tracking-wide text-foreground">splat editor</h2>
+          </div>
 
           <div className="space-y-3">
             <Button onClick={handleFileSelect} variant="outline" className="w-full glass-button gap-2" size="sm">
