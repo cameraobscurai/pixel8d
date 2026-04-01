@@ -576,7 +576,12 @@ export const SplatEditor: React.FC<SplatEditorProps> = ({ captureId }) => {
       {/* Left sidebar - File & Splat management */}
       <div className="w-80 flex-shrink-0 border-r border-border overflow-y-auto bg-background/95 backdrop-blur-sm z-20">
         <div className="p-4 border-b border-border">
-          <h2 className="text-lg font-light tracking-wide text-foreground mb-4">splat editor</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm"><ArrowLeft size={14} /></Button>
+            </Link>
+            <h2 className="text-lg font-light tracking-wide text-foreground">splat editor</h2>
+          </div>
 
           <div className="space-y-3">
             <Button onClick={handleFileSelect} variant="outline" className="w-full glass-button gap-2" size="sm">
