@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import {
@@ -13,8 +14,9 @@ import { Slider } from '@/components/ui/slider';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   FolderOpen, Link as LinkIcon, Download, RotateCcw, Eye, EyeOff,
-  Scissors, Bug, Camera, Upload, Trash2, Box
+  Scissors, Bug, Camera, Upload, Trash2, Box, ArrowLeft
 } from 'lucide-react';
+import { CAPTURES_BY_ID } from '@/lib/captures';
 
 interface LoadedSplat {
   id: string;
@@ -22,6 +24,10 @@ interface LoadedSplat {
   mesh: any;
   fileBytes?: Uint8Array;
   pathOrUrl: string;
+}
+
+interface SplatEditorProps {
+  captureId?: string | null;
 }
 
 export const SplatEditor: React.FC = () => {
