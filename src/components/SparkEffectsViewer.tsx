@@ -6,36 +6,35 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { RotateCcw, ArrowLeft } from 'lucide-react';
+import { fetchCaptureSplatUrl } from '@/lib/luma';
 
 type EffectType = 'Magic' | 'Spread' | 'Unroll' | 'Twister' | 'Rain';
 
 interface EffectConfig {
-  splatUrl: string;
   position: [number, number, number];
   scale?: number;
 }
 
+interface SparkEffectsViewerProps {
+  captureId: string;
+}
+
 const EFFECT_CONFIGS: Record<EffectType, EffectConfig> = {
   Magic: {
-    splatUrl: 'https://sparkjs.dev/assets/splats/primerib-tamos.spz',
     position: [0, 0, 0],
   },
   Spread: {
-    splatUrl: 'https://sparkjs.dev/assets/splats/valley.spz',
     position: [0, 1, 1],
   },
   Unroll: {
-    splatUrl: 'https://sparkjs.dev/assets/splats/burger-from-amboy.spz',
     position: [0, 0, 0],
     scale: 1.5,
   },
   Twister: {
-    splatUrl: 'https://sparkjs.dev/assets/splats/sutro.zip',
     position: [0, -1, 1],
     scale: 0.8,
   },
   Rain: {
-    splatUrl: 'https://sparkjs.dev/assets/splats/sutro.zip',
     position: [0, -1, 1],
     scale: 0.8,
   },
@@ -103,7 +102,7 @@ function getEffectStatements(effectType: number) {
     vec3 scales = ${inputs.gsplat}.scales;
     vec3 localPos = ${inputs.gsplat}.center;
     float l = length(localPos.xz);
-    
+
     if (${inputs.effectType} == 1) {
       float border = abs(s-l-.5);
       localPos *= 1.-.2*exp(-20.*border);
@@ -128,8 +127,8 @@ function getEffectStatements(effectType: number) {
       vec4 effectResult = twister(localPos, scales, t);
       ${outputs.gsplat}.center = effectResult.xyz;
       ${outputs.gsplat}.scales = mix(vec3(.002), scales, pow(effectResult.w, 12.));
-      float s = effectResult.w;
-      float spin = -t * 0.3 * (1.0 - s);
+      float ss = effectResult.w;
+      float spin = -t * 0.3 * (1.0 - ss);
       vec4 spinQ = vec4(0.0, sin(spin*0.5), 0.0, cos(spin*0.5));
       ${outputs.gsplat}.quaternion = quatQuat(spinQ, ${inputs.gsplat}.quaternion);
     } else if (${inputs.effectType} == 5) {
@@ -143,7 +142,7 @@ function getEffectStatements(effectType: number) {
   `;
 }
 
-export const SparkEffectsViewer: React.FC = () => {
+export const SparkEffectsViewer: React.FC<SparkEffectsViewerProps> = ({ captureId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -154,13 +153,19 @@ export const SparkEffectsViewer: React.FC = () => {
   const splatLoadedRef = useRef(false);
   const cameraAngleRef = useRef(0);
   const animationRef = useRef<number | null>(null);
+  const currentEffectRef = useRef<EffectType>('Magic');
 
   const [currentEffect, setCurrentEffect] = useState<EffectType>('Magic');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const CAMERA_RADIUS = 3;
   const CAMERA_HEIGHT = 2;
   const ROTATION_SPEED = 0.2;
+
+  useEffect(() => {
+    currentEffectRef.current = currentEffect;
+  }, [currentEffect]);
 
   const setupSplatModifier = useCallback((splatMesh: any, effect: EffectType) => {
     const effectTypeInt = effect === 'Magic' ? 1 : effect === 'Spread' ? 2 : effect === 'Unroll' ? 3 : effect === 'Twister' ? 4 : 5;
@@ -192,34 +197,43 @@ export const SparkEffectsViewer: React.FC = () => {
 
   const loadSplatForEffect = useCallback(async (effect: EffectType) => {
     if (!sceneRef.current) return;
+
     setIsLoading(true);
+    setError(null);
 
-    // Clean up existing
-    if (splatMeshRef.current) {
-      sceneRef.current.remove(splatMeshRef.current);
-      splatMeshRef.current = null;
+    try {
+      if (splatMeshRef.current) {
+        sceneRef.current.remove(splatMeshRef.current);
+        splatMeshRef.current = null;
+      }
+
+      const config = EFFECT_CONFIGS[effect];
+      const splatUrl = await fetchCaptureSplatUrl(captureId);
+      const splatMesh = new SplatMesh({ url: splatUrl }) as any;
+      splatMesh.quaternion.set(1, 0, 0, 0);
+      splatMesh.position.set(...config.position);
+
+      if (config.scale) {
+        splatMesh.scale.set(config.scale, config.scale, config.scale);
+      }
+
+      sceneRef.current.add(splatMesh);
+      splatLoadedRef.current = false;
+
+      await splatMesh.loaded;
+      splatLoadedRef.current = true;
+      baseTimeRef.current = 0;
+
+      setupSplatModifier(splatMesh, effect);
+      splatMeshRef.current = splatMesh;
+      setIsLoading(false);
+    } catch (loadError) {
+      console.error('Effects viewer failed:', loadError);
+      splatLoadedRef.current = false;
+      setError('Failed to load effect scene.');
+      setIsLoading(false);
     }
-
-    const config = EFFECT_CONFIGS[effect];
-    const splatMesh = new SplatMesh({ url: config.splatUrl }) as any;
-    splatMesh.quaternion.set(1, 0, 0, 0);
-    splatMesh.position.set(...config.position);
-
-    if (config.scale) {
-      splatMesh.scale.set(config.scale, config.scale, config.scale);
-    }
-
-    sceneRef.current.add(splatMesh);
-    splatLoadedRef.current = false;
-
-    await splatMesh.loaded;
-    splatLoadedRef.current = true;
-    baseTimeRef.current = 0;
-
-    setupSplatModifier(splatMesh, effect);
-    splatMeshRef.current = splatMesh;
-    setIsLoading(false);
-  }, [setupSplatModifier]);
+  }, [captureId, setupSplatModifier]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -240,14 +254,12 @@ export const SparkEffectsViewer: React.FC = () => {
     rendererRef.current = renderer;
 
     const onResize = () => {
-      if (!container) return;
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
     };
     window.addEventListener('resize', onResize);
 
-    // Start animation loop
     const animate = () => {
       if (splatLoadedRef.current) {
         baseTimeRef.current += 1 / 60;
@@ -256,9 +268,9 @@ export const SparkEffectsViewer: React.FC = () => {
         animateT.current.value = 0;
       }
 
-      // Camera orbit
+      const activeEffect = currentEffectRef.current;
       cameraAngleRef.current += ROTATION_SPEED * (1 / 60);
-      if (currentEffect === 'Twister' || currentEffect === 'Rain') {
+      if (activeEffect === 'Twister' || activeEffect === 'Rain') {
         cameraAngleRef.current = 0;
       }
 
@@ -266,7 +278,7 @@ export const SparkEffectsViewer: React.FC = () => {
       camera.position.z = Math.sin(cameraAngleRef.current) * CAMERA_RADIUS;
       camera.position.y = CAMERA_HEIGHT;
 
-      if (currentEffect === 'Spread') {
+      if (activeEffect === 'Spread') {
         camera.lookAt(0, 1, 0);
       } else {
         camera.lookAt(0, 0, 0);
@@ -279,10 +291,9 @@ export const SparkEffectsViewer: React.FC = () => {
       renderer.render(scene, camera);
       animationRef.current = requestAnimationFrame(animate);
     };
-    animate();
 
-    // Load initial effect
-    loadSplatForEffect('Magic');
+    animate();
+    loadSplatForEffect(currentEffectRef.current);
 
     return () => {
       window.removeEventListener('resize', onResize);
@@ -292,12 +303,13 @@ export const SparkEffectsViewer: React.FC = () => {
         container.removeChild(renderer.domElement);
       }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadSplatForEffect]);
 
   const handleEffectChange = async (effect: string) => {
-    const e = effect as EffectType;
-    setCurrentEffect(e);
-    await loadSplatForEffect(e);
+    const nextEffect = effect as EffectType;
+    currentEffectRef.current = nextEffect;
+    setCurrentEffect(nextEffect);
+    await loadSplatForEffect(nextEffect);
   };
 
   const handleResetTime = () => {
@@ -307,14 +319,13 @@ export const SparkEffectsViewer: React.FC = () => {
 
   return (
     <div className="w-full h-screen flex flex-col bg-background relative overflow-hidden">
-      {/* Controls bar */}
       <div className="glass-container glass-container--toolbar border-b border-white/20 dark:border-black/20 relative z-10">
         <div className="glass-filter"></div>
         <div className="glass-overlay"></div>
         <div className="glass-specular"></div>
         <div className="glass-content glass-content--toolbar">
           <div className="flex items-center gap-4">
-            <Link to="/">
+            <Link to={`/?capture=${captureId}`}>
               <Button variant="ghost" size="sm"><ArrowLeft size={14} /></Button>
             </Link>
             <h1 className="text-3xl font-light tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent">
@@ -322,7 +333,7 @@ export const SparkEffectsViewer: React.FC = () => {
             </h1>
             <div className="h-6 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent dark:via-slate-600" />
             <span className="text-sm text-slate-600 dark:text-slate-400 font-light">
-              splat reveal animations
+              current capture • splat reveal animations
             </span>
             {isLoading && (
               <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 ml-6">
@@ -368,7 +379,6 @@ export const SparkEffectsViewer: React.FC = () => {
         </svg>
       </div>
 
-      {/* Viewer canvas */}
       <div ref={containerRef} className="flex-1 relative" style={{ touchAction: 'none' }}>
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-white/30 dark:bg-black/30 z-10">
@@ -380,6 +390,15 @@ export const SparkEffectsViewer: React.FC = () => {
               <p className="text-slate-600 dark:text-slate-400 text-sm">
                 preparing {currentEffect.toLowerCase()} reveal
               </p>
+            </div>
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center backdrop-blur-md bg-white/30 dark:bg-black/30 z-10">
+            <div className="glass-panel p-8 text-center rounded-2xl max-w-md">
+              <h2 className="text-xl font-medium mb-2 text-foreground">{error}</h2>
+              <p className="text-muted-foreground text-sm">Spark could not initialize the selected capture.</p>
             </div>
           </div>
         )}
