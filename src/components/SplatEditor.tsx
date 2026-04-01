@@ -30,7 +30,7 @@ interface SplatEditorProps {
   captureId?: string | null;
 }
 
-export const SplatEditor: React.FC = () => {
+export const SplatEditor: React.FC<SplatEditorProps> = ({ captureId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
