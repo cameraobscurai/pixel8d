@@ -23,21 +23,21 @@ const Index = () => {
     <div className="relative">
       {/* Navigation buttons */}
       <div className="absolute top-4 right-4 z-50 flex gap-2">
-        <Link to="/editor">
-          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
-            <Wrench size={16} />
+        <Link to={`/editor?capture=${currentCapture}`}>
+          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur" size="sm">
+            <Wrench size={14} />
             Editor
           </Button>
         </Link>
         <Link to="/sogs">
-          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
-            <FileArchive size={16} />
+          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur" size="sm">
+            <FileArchive size={14} />
             SOGS
           </Button>
         </Link>
         <Link to="/stochastic">
-          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
-            <Shuffle size={16} />
+          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur" size="sm">
+            <Shuffle size={14} />
             Stochastic
           </Button>
         </Link>
