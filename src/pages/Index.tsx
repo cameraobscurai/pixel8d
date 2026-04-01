@@ -42,14 +42,14 @@ const Index = () => {
           </Button>
         </Link>
         <Link to="/effects">
-          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
-            <Sparkles size={16} />
+          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur" size="sm">
+            <Sparkles size={14} />
             Effects
           </Button>
         </Link>
         <Link to="/gallery">
-          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur">
-            <Images size={16} />
+          <Button variant="outline" className="gap-2 bg-background/80 backdrop-blur" size="sm">
+            <Images size={14} />
             Gallery
           </Button>
         </Link>
