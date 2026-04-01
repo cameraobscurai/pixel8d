@@ -21,6 +21,8 @@ interface CameraPreset {
 
 interface LumaSplatViewerProps {
   captureSource?: string;
+  captureId?: string;
+  captureTitle?: string;
 }
 
 const INITIAL_CAMERA_STATE: CameraState = {
