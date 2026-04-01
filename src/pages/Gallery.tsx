@@ -62,6 +62,13 @@ const LUMA_CAPTURES: LumaCapture[] = [
     embedUrl: 'https://lumalabs.ai/embed/c0d64d9e-a2af-41de-9b2c-c6cfd0e4db8b?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
     thumbnail: 'https://images.unsplash.com/photo-1500534314263-a834e34fe98d?w=400&h=300&fit=crop',
     description: 'Expansive sparkle capture'
+  },
+  {
+    id: '430f929f-1a2c-4059-950c-071506d4268d',
+    title: 'Sparkle Scene F',
+    embedUrl: 'https://lumalabs.ai/embed/430f929f-1a2c-4059-950c-071506d4268d?mode=sparkles&background=%23ffffff&color=%23000000&showTitle=true&loadBg=true&logoPosition=bottom-left&infoPosition=bottom-right&cinematicVideo=undefined&showMenu=false',
+    thumbnail: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop',
+    description: 'Sparkle scene capture'
   }
 ];
 

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGLRenderer, PerspectiveCamera, Scene, Vector3, MathUtils, FogExp2, Color } from 'three';
+import { WebGLRenderer, PerspectiveCamera, Scene, Vector2, Vector3, MathUtils, FogExp2, Color } from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { CameraControls } from './CameraControls';
 import { ViewerToolbar } from './ViewerToolbar';
@@ -129,7 +129,7 @@ export const LumaSplatViewer: React.FC<LumaSplatViewerProps> = ({
       const [width, height] = options.resolution.split('x').map(Number);
       
       // Store original renderer size
-      const originalSize = renderer.getSize(new Vector3());
+      const originalSize = renderer.getSize(new Vector2());
       const originalPixelRatio = renderer.getPixelRatio();
 
       // Create high-resolution render target
