@@ -21,6 +21,8 @@ interface CameraPreset {
 
 interface LumaSplatViewerProps {
   captureSource?: string;
+  captureId?: string;
+  captureTitle?: string;
 }
 
 const INITIAL_CAMERA_STATE: CameraState = {
@@ -55,7 +57,9 @@ const QUALITY_PRESETS = {
 };
 
 export const LumaSplatViewer: React.FC<LumaSplatViewerProps> = ({ 
-  captureSource = 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc' 
+  captureSource = 'https://lumalabs.ai/capture/e769d12e-a0ac-4338-93bd-a82f078e0efc',
+  captureId,
+  captureTitle,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
