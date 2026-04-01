@@ -2,18 +2,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, ExternalLink, Eye } from 'lucide-react';
-
-interface LumaCapture {
-  id: string;
-  title: string;
-  embedUrl: string;
-  thumbnail: string;
-  description?: string;
-}
+import { ExternalLink, Eye } from 'lucide-react';
+import type { CaptureData } from '@/lib/captures';
 
 interface LumaGalleryItemProps {
-  capture: LumaCapture;
+  capture: CaptureData;
   index: number;
   layoutMode: 'masonry' | 'grid-2' | 'grid-3';
   onCaptureClick: (captureId: string) => void;
@@ -26,10 +19,10 @@ export const LumaGalleryItem: React.FC<LumaGalleryItemProps> = ({
   onCaptureClick
 }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer for lazy loading
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -38,115 +31,90 @@ export const LumaGalleryItem: React.FC<LumaGalleryItemProps> = ({
           observer.disconnect();
         }
       },
-      {
-        threshold: 0.1,
-        rootMargin: '50px'
-      }
+      { threshold: 0.1, rootMargin: '100px' }
     );
-
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
-    }
-
+    if (cardRef.current) observer.observe(cardRef.current);
     return () => observer.disconnect();
   }, []);
 
-  // Get dynamic height for masonry layout
-  const getItemHeight = () => {
-    const baseHeights = [320, 400, 360, 440, 380];
-    return baseHeights[index % baseHeights.length];
-  };
-
-  const handleMainViewClick = () => {
-    onCaptureClick(capture.id);
-  };
+  const handleMainViewClick = () => onCaptureClick(capture.id);
 
   const handlePreviewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     window.open(`https://lumalabs.ai/capture/${capture.id}`, '_blank');
   };
 
-  const cardStyle = layoutMode === 'masonry' ? {
-    height: `${getItemHeight()}px`,
-    breakInside: 'avoid' as const,
-    marginBottom: '24px'
-  } : {
-    height: '400px'
-  };
+  const masonryHeights = [320, 400, 360, 440, 380];
+  const cardStyle = layoutMode === 'masonry'
+    ? { height: `${masonryHeights[index % masonryHeights.length]}px`, breakInside: 'avoid' as const, marginBottom: '24px' }
+    : { aspectRatio: '4/3' };
 
   return (
     <Card 
       ref={cardRef}
-      className="group overflow-hidden bg-card hover:shadow-lg transition-all duration-300 relative cursor-pointer"
+      className="group overflow-hidden bg-card hover:shadow-lg transition-all duration-300 cursor-pointer border-border"
       style={cardStyle}
       onClick={handleMainViewClick}
     >
       <CardContent className="p-0 h-full relative">
         {isVisible ? (
           <div className="w-full h-full relative">
-            {/* Thumbnail Image */}
-            <img
-              src={capture.thumbnail}
-              alt={capture.title}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${
-                isImageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setIsImageLoaded(true)}
-              loading="lazy"
-            />
-            
-            {/* Loading placeholder */}
-            {!isImageLoaded && (
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-purple-600/20 animate-pulse flex items-center justify-center">
-                <div className="text-muted-foreground">Loading...</div>
+            {!imgError ? (
+              <img
+                src={capture.thumbnail}
+                alt={capture.title}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${
+                  isImageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setIsImageLoaded(true)}
+                onError={() => setImgError(true)}
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground text-sm">No preview</span>
               </div>
             )}
             
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+            {!isImageLoaded && !imgError && (
+              <div className="absolute inset-0 bg-muted animate-pulse" />
+            )}
             
-            {/* Content overlay */}
-            <div className="absolute inset-0 flex flex-col justify-between p-4 text-white">
-              {/* Top controls */}
-              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  onClick={handlePreviewClick}
-                  variant="secondary"
-                  size="sm"
-                  className="bg-black/50 hover:bg-black/70 text-white border-none"
-                >
-                  <ExternalLink size={16} />
-                </Button>
-              </div>
-              
-              {/* Bottom content */}
-              <div className="space-y-3">
-                {/* Main action button */}
-                <div className="flex justify-center">
-                  <Button
-                    size="lg"
-                    className="rounded-full w-16 h-16 bg-primary/90 hover:bg-primary text-primary-foreground shadow-lg opacity-80 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Eye size={24} />
-                  </Button>
-                </div>
-                
-                {/* Title and description */}
-                <div className="text-center">
-                  <h3 className="font-semibold text-lg mb-1">{capture.title}</h3>
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70 group-hover:opacity-90 transition-opacity" />
+            
+            {/* Top controls */}
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                onClick={handlePreviewClick}
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 bg-background/60 backdrop-blur hover:bg-background/80"
+              >
+                <ExternalLink size={14} />
+              </Button>
+            </div>
+            
+            {/* Bottom content */}
+            <div className="absolute bottom-0 left-0 right-0 p-4">
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-white text-base truncate">{capture.title}</h3>
                   {capture.description && (
-                    <p className="text-sm opacity-75">{capture.description}</p>
+                    <p className="text-white/70 text-xs mt-0.5 truncate">{capture.description}</p>
                   )}
-                  <p className="text-xs opacity-60 mt-2">Click to load in main viewer</p>
                 </div>
+                <Button
+                  size="icon"
+                  className="shrink-0 rounded-full h-10 w-10 bg-primary/90 hover:bg-primary text-primary-foreground shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Eye size={18} />
+                </Button>
               </div>
             </div>
           </div>
         ) : (
-          // Loading state while waiting for intersection
-          <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center">
-            <div className="text-muted-foreground">Loading...</div>
-          </div>
+          <div className="w-full h-full bg-muted animate-pulse" />
         )}
       </CardContent>
     </Card>
